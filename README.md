@@ -6,6 +6,8 @@ The reason why I started making this is so I can actually store a list of songs 
 
 As a side note, I deleted most of the work done in this project by accident so a lot of it is going to be redone in the first commits and the program used to be more complete. Most importantly, *this isnt the final name for this T-T.*
 
+WARNING: This software is unfinished and subject to change, until any releases are made in github, it will most likely not be stable
+
 ## Usage
 
 (I know this is ugly, it is subject to change and will change)
@@ -13,6 +15,11 @@ As a side note, I deleted most of the work done in this project by accident so a
 An example playlist file is given in lists: "NCS.txt"
 
 windows: run `playlists.exe playlist_file`
+
+### Dependencies
+ - odin programming language: https://odin-lang.org/
+ - raylib (vendored in odin): https://www.raylib.com/
+ - clay layout library (get odin bindings): https://github.com/nicbarker/clay
 
 ### Building
 
