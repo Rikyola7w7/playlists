@@ -20,9 +20,26 @@ windows: run `playlists.exe playlist_file`
  - odin programming language: https://odin-lang.org/
  - raylib (vendored in odin): https://www.raylib.com/
  - clay layout library (get odin bindings): https://github.com/nicbarker/clay
+ - spall profiler (in odin core library): https://github.com/colrdavidson/spall-web
 
 ### Building
+
+Must have a custom raylib build with SUPPORT_CUSTOM_FRAME_CONTROL on, see [Custom Raylib Build](#custom-raylib-build)
 
 windows: run `build.bat`
 
 linux: soon
+
+### Custom Raylib Build
+Steps to build raylib with SUPPORT_CUSTOM_FRAME_CONTROL on:
+1. Copy the whole vendor:raylib directory into shared:raylib-custom (new directory)
+2. Download latest raylib release zip file (the first in the list): https://github.com/raysan5/raylib/releases
+3. Unzip it somewhere
+4. On windows: 
+    1. Open cmd in the directory where you unzipped raylib
+    2. Run `cmake -G "Visual Studio 17 2022" -DCUSTOMIZE_BUILD=On -DSUPPORT_CUSTOM_FRAME_CONTROL=On`
+5. On linux: WARNING: Untested
+    1. Open terminal in directory where you unzipped raylib
+    2. Run `cmake -DCUSTOMIZE_BUILD=On -DSUPPORT_CUSTOM_FRAME_CONTROL=On`
+6. Run `cmake --build .` or for a release build, run `cmake --build . --config release`
+7. Overwrite files in shared:raylib-custom/your_operating_system with files in raylib/Release directory

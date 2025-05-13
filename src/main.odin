@@ -9,7 +9,8 @@ import "core:math/rand"
 import "core:path/filepath"
 
 import "core:prof/spall"
-import ray "vendor:raylib"
+//import ray "vendor:raylib"
+import ray "shared:raylib-custom"
 
 /* TODO:
 [ ] Actual error messages
@@ -386,12 +387,25 @@ main :: proc()
   ray.SetTextureFilter(fonts[Font_LiberationMono].texture, .BILINEAR)
   Clay_Init(&fonts[0], screenWidth, screenHeight)
 
-  ray.SetTargetFPS(60)
 
-  deltaTime: f32 = 0.0
+  // Time vars
+  previousTime := ray.GetTime() // Previous time measure
+  currentTime := 0.0            // Current time measure
+  updateDrawTime := 0.0         // Update + Draw time
+  waitTime := 0.0           // Wait time (if target fps required)
+  deltaTime: f32 = 0.0          // Frame time (Update + Draw + Wait time)
+  timeCounter: f32 = 0.0        // Accumulative time counter (seconds)  
+  targetFPS := 60
+
+  //ray.SetTargetFPS(60)
+
   musicPause := false
   for !ray.WindowShouldClose() {
-    spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
+    spall._buffer_begin(&spall_ctx, &spall_buffer, "update & render")
+    spall._buffer_begin(&spall_ctx, &spall_buffer, "update")
+
+    ray.PollInputEvents() // must be in frame start
+
     ray.UpdateMusicStream(music)
 
     deltaTime = ray.GetFrameTime()
@@ -421,6 +435,9 @@ main :: proc()
 
     UI_Prepare(&app.playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown, deltaTime)
 
+    spall._buffer_end(&spall_ctx, &spall_buffer) // update
+    spall._buffer_begin(&spall_ctx, &spall_buffer, "render")
+
     // Generate the auto layout for rendering
     //currentTime := ray.GetTime()
     UIRenderCommands := UI_Calculate(&app.playlist, mouseLeftDown)
@@ -430,30 +447,17 @@ main :: proc()
 
     RayUIRender(&UIRenderCommands, &fonts[0])
 
-    free_all(context.temp_allocator)
-
     ray.EndDrawing()
-  }
-}
-
-/* Custom frame control: requires building raylib with SUPPORT_CUSTOM_FRAME_CONTROL
-
-  // Time vars
-  previousTime := ray.GetTime() // Previous time measure
-  currentTime := 0.0            // Current time measure
-  updateDrawTime := 0.0         // Update + Draw time
-  waitTime := 0.0           // Wait time (if target fps required)
-  deltaTime: f32 = 0.0          // Frame time (Update + Draw + Wait time)
-  timeCounter: f32 = 0.0        // Accumulative time counter (seconds)  
-  targetFPS := 60
-  
-    ray.PollInputEvents() // in frame start
 
     ///////////////////////////////////
     // End frame
     timeCounter += deltaTime
 
     ray.SwapScreenBuffer()
+    spall._buffer_end(&spall_ctx, &spall_buffer) // render
+
+    free_all(context.temp_allocator)
+    spall._buffer_end(&spall_ctx, &spall_buffer) // update & render
 
     currentTime = ray.GetTime()
     updateDrawTime = currentTime - previousTime
@@ -464,18 +468,8 @@ main :: proc()
       currentTime = ray.GetTime()
       deltaTime = f32(currentTime - previousTime)
     } else {
-      fmt.printfln("Missed target fps: %vms", updateDrawTime)
+      fmt.printfln("Missed target fps: %vs", updateDrawTime)
     }
     previousTime = currentTime
-
-        waitTime = (1.0f/(float)targetFPS) - updateDrawTime;
-        if (waitTime > 0.0) 
-        {
-            WaitTime((float)waitTime);
-            currentTime = GetTime();
-            deltaTime = (float)(currentTime - previousTime);
-        }
-
-    previousTime = currentTime;
-
- */
+  }
+}
