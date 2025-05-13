@@ -388,11 +388,13 @@ main :: proc()
 
   ray.SetTargetFPS(60)
 
+  deltaTime: f32 = 0.0
   musicPause := false
   for !ray.WindowShouldClose() {
     spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
-
     ray.UpdateMusicStream(music)
+
+    deltaTime = ray.GetFrameTime()
 
     // TODO: Is this check good enough?
     if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
@@ -417,7 +419,7 @@ main :: proc()
     //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
     //fmt.println(timePlayed)
 
-    UI_Prepare(&app.playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown)
+    UI_Prepare(&app.playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown, deltaTime)
 
     // Generate the auto layout for rendering
     //currentTime := ray.GetTime()
@@ -433,3 +435,47 @@ main :: proc()
     ray.EndDrawing()
   }
 }
+
+/* Custom frame control: requires building raylib with SUPPORT_CUSTOM_FRAME_CONTROL
+
+  // Time vars
+  previousTime := ray.GetTime() // Previous time measure
+  currentTime := 0.0            // Current time measure
+  updateDrawTime := 0.0         // Update + Draw time
+  waitTime := 0.0           // Wait time (if target fps required)
+  deltaTime: f32 = 0.0          // Frame time (Update + Draw + Wait time)
+  timeCounter: f32 = 0.0        // Accumulative time counter (seconds)  
+  targetFPS := 60
+  
+    ray.PollInputEvents() // in frame start
+
+    ///////////////////////////////////
+    // End frame
+    timeCounter += deltaTime
+
+    ray.SwapScreenBuffer()
+
+    currentTime = ray.GetTime()
+    updateDrawTime = currentTime - previousTime
+
+    waitTime = f64(1.0/f32(targetFPS)) - updateDrawTime
+    if waitTime > 0.0 {
+      ray.WaitTime(waitTime)
+      currentTime = ray.GetTime()
+      deltaTime = f32(currentTime - previousTime)
+    } else {
+      fmt.printfln("Missed target fps: %vms", updateDrawTime)
+    }
+    previousTime = currentTime
+
+        waitTime = (1.0f/(float)targetFPS) - updateDrawTime;
+        if (waitTime > 0.0) 
+        {
+            WaitTime((float)waitTime);
+            currentTime = GetTime();
+            deltaTime = (float)(currentTime - previousTime);
+        }
+
+    previousTime = currentTime;
+
+ */

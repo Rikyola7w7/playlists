@@ -5,7 +5,7 @@ import "core:prof/spall"
 import ray "vendor:raylib"
 import clay "shared:clay-odin"
 
-UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, screenWidth, screenHeight: i32, mouseDown: bool)
+UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, screenWidth, screenHeight: i32, mouseDown: bool, deltaTime: f32)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
   @static UI_debug := false
@@ -67,7 +67,7 @@ UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, scree
   }
 
   SCROLL_INTENSITY :: 2
-  clay.UpdateScrollContainers(true, clay.Vector2{mouseWheel.x, mouseWheel.y*SCROLL_INTENSITY}, ray.GetFrameTime())
+  clay.UpdateScrollContainers(true, clay.Vector2{mouseWheel.x, mouseWheel.y*SCROLL_INTENSITY}, deltaTime)
 }
 
 UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
