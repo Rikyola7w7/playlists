@@ -12,7 +12,7 @@ WARNING: This software is unfinished and subject to change, until any releases a
 
 (I know this is ugly, it is subject to change and will change)
 
-An example playlist file is given in lists: "NCS.txt"
+An example playlist file is given in the lists folder: "NCS.txt"
 
 windows: run `playlists.exe playlist_file`
 
