@@ -10,23 +10,24 @@ import ray "vendor:raylib"
 import clay "shared:clay-odin"
 
 /* TODO:
- - Actual error messages
- - Improve parser to show errors
- - UI for adding a song to the list
- - UI to show the amount of song left as a bar
- - UI to randomize list order (call the ShuffleSongs proc)
- - Different thing for active song and playing song, so I can check out info on a song that
-   I'm not playing and if I go back to the playing song it doesn't start over
- - UI to show the details of a song without playing it
- - UI for volume controls
- - Automatic scroll down when getting to a song that is offscreen (maybe two before ?)
+[ ] Actual error messages
+[ ] Improve parser to show errors
+[ ] Different thing for active song and playing song, so I can check out info on a song that
+    I'm not playing and if I go back to the playing song it doesn't start over
+[ ] Automatic scroll down when getting to a song that is offscreen (maybe two before ?)
+[x] Store the songs as []^SongData pointing to a []SongData array
 
- - Do I want to store the songs as []^SongData pointing to a []SongData array so sorting is quicker?
+UI:
+[ ] UI for adding a song to the list
+[ ] UI to show the amount of song left as a bar
+[ ] UI to randomize list order (call the ShuffleSongs proc)
+[ ] UI to sort list order by various properties (artist, alphabetical, ...)
+[ ] UI to show the details of a song without playing it
+[ ] UI for volume controls (slider + info)
+[ ] UI rework
 
- - Probably no way to do it in raylib, but try to find out if I can keep the music playing while moving/resizing the window ?
-
- - UI rework
- - Icon (winows only ?)
+[ ] Probably no way to do it in raylib, but try to find out if I can keep the music playing while moving/resizing the window ?
+[ ] Icon (winows only ?)
 */
 
 SongSourceType :: enum {
@@ -39,11 +40,11 @@ SongData :: struct {
   group, name, album: string,
   source: string,
   sourceType: SongSourceType,
-  //next, prev: ^SongData,
 }
 
 Playlist :: struct {
-  songs: []SongData,
+  songData: [dynamic]SongData, // NOTE: Should keep original order
+  songs: [dynamic]^SongData,
   name: string,
   activeSongIdx: int,
   activeSongChanged: bool,
@@ -273,7 +274,7 @@ ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
       musicLoaded = false
     }
 
-    activeSong := &playlist.songs[newIdx]
+    activeSong := playlist.songs[newIdx]
     switch activeSong.sourceType {
       case .None: assert(false, "unreachable")
       case .Link: {
@@ -407,7 +408,7 @@ UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(cla
       {
         for songIdx := 0; songIdx < len(playlist.songs); songIdx += 1
         {
-          song := &playlist.songs[songIdx]
+          song := playlist.songs[songIdx]
           if clay.UI()({id = clay.ID("song", u32(songIdx)),
             layout = {sizing = {clay.SizingGrow({}), clay.SizingGrow({})}, padding = {16,16,16,16}},
             backgroundColor = clay.Hovered() ? (mouseDown ? {176, 90, 34, 255} : {200, 110, 40, 255}) : COLOR_ORANGE}) {
@@ -420,7 +421,7 @@ UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(cla
     }
 
     if playlist.activeSongIdx != -1 {
-      activeSong := &playlist.songs[playlist.activeSongIdx]
+      activeSong := playlist.songs[playlist.activeSongIdx]
       if clay.UI()({id = clay.ID("ActiveSongContainer"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT}) {
         clay.Text(activeSong.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
         clay.Text(activeSong.group, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
@@ -456,7 +457,7 @@ UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(cla
   return clay.EndLayout()
 }
 
-main :: proc()
+InitAll :: proc() -> Playlist
 {
   ok: bool
   data: []u8
@@ -468,10 +469,22 @@ main :: proc()
     fmt.printfln("Usage: %s playlist", os.args[0])
     os.exit(0)
   }
-  songs := ParseSongs(data)
-  //SortSongData(songs[:])
-  playlist := Playlist{songs = songs[:], name = filepath.short_stem(os.args[1])}
-  playlist.activeSongIdx = -1
+  songData := ParseSongs(data)
+  songs := make([dynamic]^SongData, len(songData), len(songData))
+  for i := 0; i < len(songData); i += 1 { songs[i] = &songData[i] }
+  playlist := Playlist{
+    songData = songData,
+    songs = songs,
+    name = filepath.short_stem(os.args[1]),
+    activeSongIdx = -1,
+  }
+
+  return playlist
+}
+
+main :: proc()
+{
+  playlist := InitAll()
 
   ray.SetTraceLogLevel(.WARNING)
   ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT}) // WINDOW_HIGHDPI
@@ -535,5 +548,6 @@ main :: proc()
     ray.EndDrawing()
   }
 
-  delete(songs)
+  delete(playlist.songs)
+  delete(playlist.songData)
 }
