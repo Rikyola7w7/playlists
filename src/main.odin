@@ -386,13 +386,23 @@ main :: proc()
   ray.SetTextureFilter(fonts[Font_LiberationMono].texture, .BILINEAR)
   Clay_Init(&fonts[0], screenWidth, screenHeight)
 
-  ray.SetTargetFPS(60)
+
+  // Time vars
+  previousTime := ray.GetTime() // Previous time measure
+  currentTime := 0.0            // Current time measure
+  updateDrawTime := 0.0         // Update + Draw time
+  waitTime := 0.0           // Wait time (if target fps required)
+  deltaTime: f32 = 0.0          // Frame time (Update + Draw + Wait time)
+  timeCounter: f32 = 0.0        // Accumulative time counter (seconds)  
+  targetFPS := 60
+
+  //ray.SetTargetFPS(60)
 
   musicPause := false
   for !ray.WindowShouldClose() {
-    spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
-
     ray.UpdateMusicStream(music)
+
+    deltaTime = ray.GetFrameTime()
 
     // TODO: Is this check good enough?
     if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
@@ -417,7 +427,7 @@ main :: proc()
     //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
     //fmt.println(timePlayed)
 
-    UI_Prepare(&app.playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown)
+    UI_Prepare(&playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown)
 
     // Generate the auto layout for rendering
     //currentTime := ray.GetTime()
@@ -427,6 +437,15 @@ main :: proc()
     ray.ClearBackground(ray.BLACK)
 
     RayUIRender(&UIRenderCommands, &fonts[0])
+
+    ray.EndDrawing()
+
+    ///////////////////////////////////
+    // End frame
+    timeCounter += deltaTime
+
+    ray.SwapScreenBuffer()
+    spall._buffer_end(&spall_ctx, &spall_buffer) // render
 
     free_all(context.temp_allocator)
 

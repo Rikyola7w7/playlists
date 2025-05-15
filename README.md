@@ -24,6 +24,8 @@ windows: run `playlists.exe playlist_file`
 
 ### Building
 
+Must have a custom raylib build with SUPPORT_CUSTOM_FRAME_CONTROL on, see [Custom Raylib Build](#custom-raylib-build)
+
 windows: run `build.bat`
 
 linux: soon
