@@ -322,6 +322,9 @@ ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
 AppData :: struct {
   playlist: Playlist,
   spall_backing_buffer: []u8,
+  screenWidth, screenHeight: i32,
+
+  fonts: [2]ray.Font,
 }
 
 InitAll :: proc(app: ^AppData)
@@ -351,10 +354,37 @@ InitAll :: proc(app: ^AppData)
     name = filepath.short_stem(os.args[1]),
     activeSongIdx = -1,
   }
+
+  InitRaylib(app)
+  InitClay(app)
+}
+
+InitRaylib :: proc(app: ^AppData)
+{
+  ray.SetTraceLogLevel(.WARNING)
+  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT}) // WINDOW_HIGHDPI
+  app.screenWidth = 1000
+  app.screenHeight = 800
+  ray.InitWindow(app.screenWidth, app.screenHeight, "playlist viewer")
+  ray.InitAudioDevice()
+}
+
+InitClay :: proc(app: ^AppData)
+{
+  app.fonts[Font_Inconsolata] = ray.LoadFontEx("../resources/Inconsolata-Regular.ttf", 48, nil, 400)
+  ray.SetTextureFilter(app.fonts[Font_Inconsolata].texture, .BILINEAR)
+  app.fonts[Font_LiberationMono] = ray.LoadFontEx("../resources/liberation-mono.ttf", 48, nil, 400)
+  ray.SetTextureFilter(app.fonts[Font_LiberationMono].texture, .BILINEAR)
+  Clay_Init(&app.fonts[0], app.screenWidth, app.screenHeight)
 }
 
 DeInitAll :: proc(app: ^AppData)
 {
+  Clay_Close()
+
+  ray.CloseAudioDevice()
+  ray.CloseWindow()
+  
   delete(app.playlist.songs)
   delete(app.playlist.songData)
   // NOTE: Spall deInit
@@ -368,23 +398,6 @@ main :: proc()
   app: AppData
   InitAll(&app)
   defer DeInitAll(&app)
-
-  ray.SetTraceLogLevel(.WARNING)
-  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT}) // WINDOW_HIGHDPI
-  screenWidth : i32 = 1000
-  screenHeight : i32 = 800
-  ray.InitWindow(screenWidth, screenHeight, "playlist viewer")
-  defer ray.CloseWindow()
-  ray.InitAudioDevice()
-  defer ray.CloseAudioDevice()
-
-  defer Clay_Close()
-  fonts : [2]ray.Font = ---
-  fonts[Font_Inconsolata] = ray.LoadFontEx("../resources/Inconsolata-Regular.ttf", 48, nil, 400)
-  ray.SetTextureFilter(fonts[Font_Inconsolata].texture, .BILINEAR)
-  fonts[Font_LiberationMono] = ray.LoadFontEx("../resources/liberation-mono.ttf", 48, nil, 400)
-  ray.SetTextureFilter(fonts[Font_LiberationMono].texture, .BILINEAR)
-  Clay_Init(&fonts[0], screenWidth, screenHeight)
 
   ray.SetTargetFPS(60)
 
@@ -407,8 +420,8 @@ main :: proc()
     mousePos := ray.GetMousePosition()
     mouseLeftDown := ray.IsMouseButtonDown(.LEFT)
     mouseWheel : ray.Vector2 = ray.GetMouseWheelMoveV()
-    screenWidth = ray.GetScreenWidth()
-    screenHeight = ray.GetScreenHeight()
+    app.screenWidth = ray.GetScreenWidth()
+    app.screenHeight = ray.GetScreenHeight()
 
     if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
       musicPause = !musicPause
@@ -420,7 +433,7 @@ main :: proc()
     //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
     //fmt.println(timePlayed)
 
-    UI_Prepare(&app.playlist, mousePos, mouseWheel, screenWidth, screenHeight, mouseLeftDown, deltaTime)
+    UI_Prepare(&app.playlist, mousePos, mouseWheel, app.screenWidth, app.screenHeight, mouseLeftDown, deltaTime)
 
     spall._buffer_end(&spall_ctx, &spall_buffer) // update
     spall._buffer_begin(&spall_ctx, &spall_buffer, "render")
@@ -432,7 +445,7 @@ main :: proc()
     ray.BeginDrawing()
     ray.ClearBackground(ray.BLACK)
 
-    RayUIRender(&UIRenderCommands, &fonts[0])
+    RayUIRender(&UIRenderCommands, &app.fonts[0])
 
     ray.EndDrawing()
 
