@@ -20,6 +20,7 @@ windows: run `playlists.exe playlist_file`
  - odin programming language: https://odin-lang.org/
  - raylib (vendored in odin): https://www.raylib.com/
  - clay layout library (get odin bindings): https://github.com/nicbarker/clay
+ - spall profiler (in odin core library): https://github.com/colrdavidson/spall-web
 
 ### Building
 

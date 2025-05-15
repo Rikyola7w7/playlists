@@ -1,11 +1,13 @@
 package main
 
 import "core:fmt"
+import "core:prof/spall"
 import ray "vendor:raylib"
 import clay "shared:clay-odin"
 
 UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, screenWidth, screenHeight: i32, mouseDown: bool)
 {
+  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
   @static UI_debug := false
   @static scrollbarData: struct {
     clickOrigin, positionOrigin: clay.Vector2,
@@ -70,6 +72,7 @@ UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, scree
 
 UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
 {
+  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
   COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
   COLOR_BLUE :: clay.Color{111, 173, 162, 255}
   COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
