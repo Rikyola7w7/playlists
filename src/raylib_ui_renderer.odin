@@ -2,8 +2,7 @@ package main
 
 import "core:math"
 import "base:runtime"
-//import ray "vendor:raylib"
-import ray "shared:raylib-custom"
+import ray "vendor:raylib"
 import clay "shared:clay-odin"
 
 Raylib_camera: ray.Camera
