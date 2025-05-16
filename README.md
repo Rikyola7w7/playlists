@@ -19,13 +19,10 @@ windows: run `playlists.exe playlist_file`
 ### Dependencies
  - odin programming language: https://odin-lang.org/
  - raylib (vendored in odin): https://www.raylib.com/
- - clay layout library (get odin bindings): https://github.com/nicbarker/clay
+ - clay layout library (vendored in this project): https://github.com/nicbarker/clay
  - spall profiler (in odin core library): https://github.com/colrdavidson/spall-web
 
 ### Building
-
-Must have a custom raylib build with SUPPORT_CUSTOM_FRAME_CONTROL on, see [Custom Raylib Build](#custom-raylib-build)
-
-windows: run `build.bat`
-
-linux: soon
+1. Install odinlang if you don't have it: https://odin-lang.org/
+2. windows: run `build.bat`
+2. linux: soon
