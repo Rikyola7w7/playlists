@@ -425,7 +425,6 @@ main :: proc()
 
     if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
       musicPause = !musicPause
-
       if musicPause { ray.PauseMusicStream(music) }
       else { ray.ResumeMusicStream(music) }
     }

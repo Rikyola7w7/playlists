@@ -3,7 +3,7 @@ package main
 import "core:math"
 import "base:runtime"
 import ray "vendor:raylib"
-import clay "shared:clay-odin"
+import clay "clay-odin"
 
 Raylib_camera: ray.Camera
 

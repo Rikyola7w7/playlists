@@ -3,7 +3,7 @@ package main
 import "core:fmt"
 import "core:prof/spall"
 import ray "vendor:raylib"
-import clay "shared:clay-odin"
+import clay "clay-odin"
 
 UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, screenWidth, screenHeight: i32, mouseDown: bool, deltaTime: f32)
 {
