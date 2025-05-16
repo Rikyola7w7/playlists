@@ -24,7 +24,6 @@ windows: run `playlists.exe playlist_file`
 
 ### Building
 1. Install odinlang if you don't have it: https://odin-lang.org/
-
-2:
+2.
  - windows: run `build.bat`
  - linux: soon
