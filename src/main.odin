@@ -18,6 +18,7 @@ import ray "vendor:raylib"
     I'm not playing and if I go back to the playing song it doesn't start over
 [ ] Automatic scroll down when getting to a song that is offscreen (maybe two before ?)
 [x] Store the songs as []^SongData pointing to a []SongData array
+[x] Store a file for session data
 
 UI:
 [ ] UI for adding a song to the list
@@ -320,12 +321,21 @@ ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
 }
 
 AppData :: struct {
+  volume: f32,
   playlist: Playlist,
   spall_backing_buffer: []u8,
   screenWidth, screenHeight: i32,
 
   fonts: [2]ray.Font,
+  playlistFileAbsPath: string,
 }
+
+DataFile :: struct {
+  volume: f32,
+  previousSongLen: int, // length of the string
+  previousSong: [^]u8,
+}
+DATAFILE_NAME :: "prog.dat"
 
 InitAll :: proc(app: ^AppData)
 {
@@ -335,10 +345,25 @@ InitAll :: proc(app: ^AppData)
   spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 
+  listFile := os.args[1] if len(os.args) > 1 else ""
+
   ok: bool
   data: []u8
-  if len(os.args) > 1 {
-    data, ok = os.read_entire_file(os.args[1])
+  if os.exists(DATAFILE_NAME) {
+    data, ok = os.read_entire_file(DATAFILE_NAME)
+    assert(ok)
+
+    volume := (cast(^f32)&data[offset_of(DataFile, volume)])^
+    app.volume = clamp(volume, 0.0, 0.4)
+    // NOTE: If I want to delete the data from the file, clone the string here.
+    if listFile == "" {
+      listFile = strings.string_from_ptr(&data[offset_of(DataFile, previousSong)], 
+          (cast(^int)&data[offset_of(DataFile, previousSongLen)])^)
+    }
+  }
+
+  if listFile != "" {
+    data, ok = os.read_entire_file(listFile)
     assert(ok)
   }
   else {
@@ -351,9 +376,11 @@ InitAll :: proc(app: ^AppData)
   app.playlist = Playlist{
     songData = songData,
     songs = songs,
-    name = filepath.short_stem(os.args[1]),
+    name = filepath.short_stem(listFile),
     activeSongIdx = -1,
   }
+  app.playlistFileAbsPath = listFile
+  if !filepath.is_abs(listFile) { app.playlistFileAbsPath, _ = filepath.abs(listFile) }
 
   InitRaylib(app)
   InitClay(app)
@@ -385,8 +412,20 @@ DeInitAll :: proc(app: ^AppData)
   ray.CloseAudioDevice()
   ray.CloseWindow()
   
+  playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
+  dataFile: DataFile
+  dataFile.volume = app.volume
+  dataFile.previousSongLen = len(playlistAbsPathData)
+  dF, err := os.open(DATAFILE_NAME, os.O_WRONLY)
+  assert(err == nil)
+  bytesWritten: int = ---
+  bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSong))))
+  assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSong)))
+  bytesWritten, err = os.write(dF, playlistAbsPathData)
+
   delete(app.playlist.songs)
   delete(app.playlist.songData)
+
   // NOTE: Spall deInit
   spall.buffer_destroy(&spall_ctx, &spall_buffer)
   delete(app.spall_backing_buffer)
@@ -401,7 +440,10 @@ main :: proc()
 
   ray.SetTargetFPS(60)
 
-  ray.SetMasterVolume(0.18) // volume 1 is way too high
+  // volume 1 is way too high
+  if app.volume == 0 { app.volume = 0.18 }
+
+  ray.SetMasterVolume(app.volume)
   musicPause := false
   for !ray.WindowShouldClose() {
     spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
