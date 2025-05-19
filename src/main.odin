@@ -332,7 +332,7 @@ AppData :: struct {
 
 DataFile :: struct {
   volume: f32,
-  previousSongLen: int, // length of the string
+  previousSongLen: i32, // length of the string
   previousSong: [^]u8,
 }
 DATAFILE_NAME :: "prog.dat"
@@ -358,7 +358,7 @@ InitAll :: proc(app: ^AppData)
     // NOTE: If I want to delete the data from the file, clone the string here.
     if listFile == "" {
       listFile = strings.string_from_ptr(&data[offset_of(DataFile, previousSong)], 
-          (cast(^int)&data[offset_of(DataFile, previousSongLen)])^)
+          int((cast(^i32)&data[offset_of(DataFile, previousSongLen)])^))
     }
   }
 
@@ -415,12 +415,13 @@ DeInitAll :: proc(app: ^AppData)
   playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
   dataFile: DataFile
   dataFile.volume = app.volume
-  dataFile.previousSongLen = len(playlistAbsPathData)
+  dataFile.previousSongLen = i32(len(playlistAbsPathData))
   dF, err := os.open(DATAFILE_NAME, os.O_WRONLY)
   assert(err == nil)
   bytesWritten: int = ---
   bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSong))))
   assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSong)))
+  fmt.println(string(playlistAbsPathData))
   bytesWritten, err = os.write(dF, playlistAbsPathData)
 
   delete(app.playlist.songs)
