@@ -411,18 +411,21 @@ DeInitAll :: proc(app: ^AppData)
 
   ray.CloseAudioDevice()
   ray.CloseWindow()
-  
-  playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
-  dataFile: DataFile
-  dataFile.volume = app.volume
-  dataFile.previousSongLen = i32(len(playlistAbsPathData))
-  dF, err := os.open(DATAFILE_NAME, os.O_WRONLY)
-  assert(err == nil)
-  bytesWritten: int = ---
-  bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSong))))
-  assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSong)))
-  fmt.println(string(playlistAbsPathData))
-  bytesWritten, err = os.write(dF, playlistAbsPathData)
+
+  {
+    playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
+    dataFile: DataFile
+    dataFile.volume = app.volume
+    dataFile.previousSongLen = i32(len(playlistAbsPathData))
+    dF, err := os.open(DATAFILE_NAME, os.O_TRUNC | os.O_CREATE)
+    fmt.assertf(err == nil, "Could not open file: %s: %v", DATAFILE_NAME, err)
+    bytesWritten: int = ---
+    bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSongLen))))
+    assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSongLen)))
+    bytesWritten, err = os.write(dF, playlistAbsPathData)
+    assert(err == nil && bytesWritten == len(playlistAbsPathData)*size_of(playlistAbsPathData[0]))
+    os.close(dF)
+  }
 
   delete(app.playlist.songs)
   delete(app.playlist.songData)
