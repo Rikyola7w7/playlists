@@ -419,7 +419,7 @@ InitAll :: proc(app: ^AppData)
 InitRaylib :: proc(app: ^AppData)
 {
   ray.SetTraceLogLevel(.WARNING)
-  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT}) // WINDOW_HIGHDPI
+  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT, .WINDOW_ALWAYS_RUN}) // WINDOW_HIGHDPI
   app.screenWidth = 1000
   app.screenHeight = 800
   ray.InitWindow(app.screenWidth, app.screenHeight, "playlist viewer")
@@ -525,20 +525,31 @@ main :: proc()
   InitAll(&app)
   defer DeInitAll(&app)
 
-  // NOTE: Starting up audio takes very long
-  //       so I do a 'fake' ui first
+  // NOTE: Starting up audio takes very long so I do a 'fake' ui first
   {
     Render(&app)
     ray.InitAudioDevice()
   }
 
   ray.SetTargetFPS(60)
-
   ray.SetMasterVolume(app.volume)
+
   for !ray.WindowShouldClose() {
     spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
 
-    Update(&app)
-    Render(&app)
+    if ray.IsWindowMinimized() {
+      // TODO: Also decrease fps?
+      ray.UpdateMusicStream(music)
+      if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+        newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
+        app.playlist.activeSongIdx = newIdx
+        ChangeLoadedMusicStream(&app.playlist, newIdx)
+      }
+      ray.BeginDrawing(); ray.EndDrawing() // end frame
+    }
+    else {
+      Update(&app)
+      Render(&app)
+    }
   }
 }
