@@ -382,6 +382,9 @@ InitAll :: proc(app: ^AppData)
   app.playlistFileAbsPath = listFile
   if !filepath.is_abs(listFile) { app.playlistFileAbsPath, _ = filepath.abs(listFile) }
 
+  // volume 1 is way too high
+  if app.volume == 0 { app.volume = 0.18 }
+
   InitRaylib(app)
   InitClay(app)
 }
@@ -393,7 +396,6 @@ InitRaylib :: proc(app: ^AppData)
   app.screenWidth = 1000
   app.screenHeight = 800
   ray.InitWindow(app.screenWidth, app.screenHeight, "playlist viewer")
-  ray.InitAudioDevice()
 }
 
 InitClay :: proc(app: ^AppData)
@@ -492,10 +494,14 @@ main :: proc()
   InitAll(&app)
   defer DeInitAll(&app)
 
-  ray.SetTargetFPS(60)
+  // NOTE: Starting up audio takes very long
+  //       so I do a 'fake' ui first
+  {
+    Render(&app)
+    ray.InitAudioDevice()
+  }
 
-  // volume 1 is way too high
-  if app.volume == 0 { app.volume = 0.18 }
+  ray.SetTargetFPS(60)
 
   ray.SetMasterVolume(app.volume)
   for !ray.WindowShouldClose() {
