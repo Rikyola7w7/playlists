@@ -436,6 +436,56 @@ DeInitAll :: proc(app: ^AppData)
   spall.context_destroy(&spall_ctx)
 }
 
+musicPause := false
+mouseLeftDown: bool
+Update :: proc(app: ^AppData)
+{
+  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+
+  ray.UpdateMusicStream(music)
+
+  deltaTime := ray.GetFrameTime()
+
+  if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+    newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
+    app.playlist.activeSongIdx = newIdx
+    ChangeLoadedMusicStream(&app.playlist, newIdx)
+  }
+
+  mousePos := ray.GetMousePosition()
+  mouseLeftDown = ray.IsMouseButtonDown(.LEFT)
+  mouseWheel : ray.Vector2 = ray.GetMouseWheelMoveV()
+  app.screenWidth = ray.GetScreenWidth()
+  app.screenHeight = ray.GetScreenHeight()
+
+  if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
+    musicPause = !musicPause
+    if musicPause { ray.PauseMusicStream(music) }
+    else { ray.ResumeMusicStream(music) }
+  }
+
+  //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
+  //fmt.println(timePlayed)
+
+  UI_Prepare(&app.playlist, mousePos, mouseWheel, app.screenWidth, app.screenHeight, mouseLeftDown, deltaTime)
+}
+
+Render :: proc(app: ^AppData)
+{
+  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+
+  // Generate the auto layout for rendering
+  //currentTime := ray.GetTime()
+  UIRenderCommands := UI_Calculate(&app.playlist, mouseLeftDown)
+
+  ray.BeginDrawing()
+  ray.ClearBackground(ray.BLACK)
+
+  RayUIRender(&UIRenderCommands, &app.fonts[0])
+
+  ray.EndDrawing()
+}
+
 main :: proc()
 {
   app: AppData
@@ -448,52 +498,10 @@ main :: proc()
   if app.volume == 0 { app.volume = 0.18 }
 
   ray.SetMasterVolume(app.volume)
-  musicPause := false
   for !ray.WindowShouldClose() {
     spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
-    spall._buffer_begin(&spall_ctx, &spall_buffer, "update")
 
-    ray.UpdateMusicStream(music)
-
-    deltaTime := ray.GetFrameTime()
-
-    if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
-      newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
-      app.playlist.activeSongIdx = newIdx
-      ChangeLoadedMusicStream(&app.playlist, newIdx)
-    }
-
-    mousePos := ray.GetMousePosition()
-    mouseLeftDown := ray.IsMouseButtonDown(.LEFT)
-    mouseWheel : ray.Vector2 = ray.GetMouseWheelMoveV()
-    app.screenWidth = ray.GetScreenWidth()
-    app.screenHeight = ray.GetScreenHeight()
-
-    if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
-      musicPause = !musicPause
-      if musicPause { ray.PauseMusicStream(music) }
-      else { ray.ResumeMusicStream(music) }
-    }
-
-    //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
-    //fmt.println(timePlayed)
-
-    UI_Prepare(&app.playlist, mousePos, mouseWheel, app.screenWidth, app.screenHeight, mouseLeftDown, deltaTime)
-
-    spall._buffer_end(&spall_ctx, &spall_buffer) // update
-    spall._buffer_begin(&spall_ctx, &spall_buffer, "render")
-
-    // Generate the auto layout for rendering
-    //currentTime := ray.GetTime()
-    UIRenderCommands := UI_Calculate(&app.playlist, mouseLeftDown)
-
-    ray.BeginDrawing()
-    ray.ClearBackground(ray.BLACK)
-
-    RayUIRender(&UIRenderCommands, &app.fonts[0])
-
-    ray.EndDrawing()
-
-    spall._buffer_end(&spall_ctx, &spall_buffer) // render
+    Update(&app)
+    Render(&app)
   }
 }
