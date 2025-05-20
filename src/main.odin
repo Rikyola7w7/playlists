@@ -330,7 +330,7 @@ AppData :: struct {
   playlistFileAbsPath: string,
 }
 
-DataFile :: struct {
+DataFile :: struct #packed {
   volume: f32,
   previousSongLen: i32, // length of the string
   previousSong: [^]u8,
@@ -357,20 +357,46 @@ InitAll :: proc(app: ^AppData)
     app.volume = clamp(volume, 0.0, 0.4)
     // NOTE: If I want to delete the data from the file, clone the string here.
     if listFile == "" {
-      listFile = strings.string_from_ptr(&data[offset_of(DataFile, previousSong)], 
-          int((cast(^i32)&data[offset_of(DataFile, previousSongLen)])^))
+      startStr := &data[8]
+      strLen := int((cast(^i32)&data[4])^)
+      listFile = strings.string_from_ptr(startStr, strLen)
     }
   }
 
+  songData: [dynamic]SongData
   if listFile != "" {
-    data, ok = os.read_entire_file(listFile)
-    assert(ok)
+    if os.is_dir(listFile) {
+      fileInfos: []os.File_Info
+      songDir, err := os.open(listFile)
+      assert(err == nil, "Could not open directory")
+      // TODO: Read more than the max count of files when exceeded?
+      fileInfos, err = os.read_dir(songDir, 128) // 128 files max
+      assert(err == nil)
+      for fi in fileInfos {
+        ext := filepath.ext(fi.name)[1:]
+        if !fi.is_dir && (ext == "mp3" || ext == "ogg" || ext == "qoa" || ext == "xm" || ext == "mod" || ext == "wav") {
+          song := SongData{
+            group = "",
+            name = filepath.short_stem(fi.name),
+            album = "",
+            source = fi.fullpath,
+            sourceType = .File,
+          }
+          append(&songData, song)
+        }
+      }
+    }
+    else {
+      data, ok = os.read_entire_file(listFile)
+      assert(ok)
+      songData = ParseSongs(data)
+    }
   }
   else {
     fmt.printfln("Usage: %s playlist", os.args[0])
     os.exit(0)
   }
-  songData := ParseSongs(data)
+
   songs := make([dynamic]^SongData, len(songData), len(songData))
   for i := 0; i < len(songData); i += 1 { songs[i] = &songData[i] }
   app.playlist = Playlist{
@@ -422,8 +448,12 @@ DeInitAll :: proc(app: ^AppData)
     dF, err := os.open(DATAFILE_NAME, os.O_TRUNC | os.O_CREATE)
     fmt.assertf(err == nil, "Could not open file: %s: %v", DATAFILE_NAME, err)
     bytesWritten: int = ---
-    bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSongLen))))
-    assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSongLen)))
+    bytesWritten, err = os.write_ptr(dF, &app.volume, size_of(app.volume))
+    assert(err == nil)
+    bytesWritten, err = os.write_ptr(dF, &dataFile.previousSongLen, size_of(dataFile.previousSongLen))
+    assert(err == nil)
+    //bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSongLen))))
+    //assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSongLen)))
     bytesWritten, err = os.write(dF, playlistAbsPathData)
     assert(err == nil && bytesWritten == len(playlistAbsPathData)*size_of(playlistAbsPathData[0]))
     os.close(dF)
