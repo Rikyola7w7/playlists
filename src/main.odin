@@ -373,7 +373,8 @@ InitAll :: proc(app: ^AppData)
       fileInfos, err = os.read_dir(songDir, 128) // 128 files max
       assert(err == nil)
       for fi in fileInfos {
-        ext := filepath.ext(fi.name)[1:]
+        ext := filepath.ext(fi.name)
+        if len(ext) > 1 { ext = ext[1:] }
         if !fi.is_dir && (ext == "mp3" || ext == "ogg" || ext == "qoa" || ext == "xm" || ext == "mod" || ext == "wav") {
           song := SongData{
             group = "",
