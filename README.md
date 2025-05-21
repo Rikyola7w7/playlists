@@ -10,11 +10,11 @@ WARNING: This software is unfinished and subject to change, until any releases a
 
 ## Usage
 
-(I know this is ugly, it is subject to change and will change)
+Run with a playlist file or a directory
 
 An example playlist file is given in the lists folder: "NCS.txt"
 
-windows: run `playlists.exe playlist_file`
+windows: run `playlists.exe playlist_file|directory`
 
 ### Dependencies
  - odin programming language: https://odin-lang.org/
