@@ -326,6 +326,8 @@ AppData :: struct {
   spall_backing_buffer: []u8,
   screenWidth, screenHeight: i32,
 
+  musicPause: bool,
+
   fonts: [2]ray.Font,
   playlistFileAbsPath: string,
 }
@@ -469,7 +471,6 @@ DeInitAll :: proc(app: ^AppData)
   spall.context_destroy(&spall_ctx)
 }
 
-musicPause := false
 mouseLeftDown: bool
 Update :: proc(app: ^AppData)
 {
@@ -477,14 +478,24 @@ Update :: proc(app: ^AppData)
 
   ray.UpdateMusicStream(music)
 
-  deltaTime := ray.GetFrameTime()
-
-  if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+  if !app.musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
     newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
     app.playlist.activeSongIdx = newIdx
     ChangeLoadedMusicStream(&app.playlist, newIdx)
   }
 
+  // volume
+  if ray.IsKeyPressed(.UP) {
+    app.volume = min(app.volume + 0.05, 1.0)
+    ray.SetMasterVolume(app.volume)
+  }
+  if ray.IsKeyPressed(.DOWN) {
+    app.volume = max(app.volume - 0.05, 0.0)
+    ray.SetMasterVolume(app.volume)
+  }
+
+  // input
+  deltaTime := ray.GetFrameTime()
   mousePos := ray.GetMousePosition()
   mouseLeftDown = ray.IsMouseButtonDown(.LEFT)
   mouseWheel : ray.Vector2 = ray.GetMouseWheelMoveV()
@@ -492,8 +503,8 @@ Update :: proc(app: ^AppData)
   app.screenHeight = ray.GetScreenHeight()
 
   if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
-    musicPause = !musicPause
-    if musicPause { ray.PauseMusicStream(music) }
+    app.musicPause = !app.musicPause
+    if app.musicPause { ray.PauseMusicStream(music) }
     else { ray.ResumeMusicStream(music) }
   }
 
@@ -540,7 +551,7 @@ main :: proc()
     if ray.IsWindowMinimized() {
       // TODO: Also decrease fps?
       ray.UpdateMusicStream(music)
-      if !musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+      if !app.musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
         newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
         app.playlist.activeSongIdx = newIdx
         ChangeLoadedMusicStream(&app.playlist, newIdx)
