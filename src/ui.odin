@@ -5,7 +5,7 @@ import "core:prof/spall"
 import ray "vendor:raylib"
 import clay "clay-odin"
 
-UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, screenWidth, screenHeight: i32, mouseDown: bool, deltaTime: f32)
+UI_Prepare :: proc(app: ^AppData, input: ^Input)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
   @static UI_debug := false
@@ -22,12 +22,14 @@ UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, scree
     }
   }
 
-  UI_mousePos := clay.Vector2{mousePos.x, mousePos.y}
-  clay.SetPointerState(UI_mousePos, mouseDown && !scrollbarData.mouseDown)
-  clay.SetLayoutDimensions(clay.Dimensions{f32(screenWidth), f32(screenHeight)})
-  if !mouseDown { scrollbarData.mouseDown = false }
+  playlist := &app.playlist
 
-  if mouseDown && !scrollbarData.mouseDown && clay.PointerOver(clay.ID("ScrollBar")) {
+  UI_mousePos := clay.Vector2{input.mousePos.x, input.mousePos.y}
+  clay.SetPointerState(UI_mousePos, input.mouseLeftDown && !scrollbarData.mouseDown)
+  clay.SetLayoutDimensions(clay.Dimensions{f32(app.screenWidth), f32(app.screenHeight)})
+  if !input.mouseLeftDown { scrollbarData.mouseDown = false }
+
+  if input.mouseLeftDown && !scrollbarData.mouseDown && clay.PointerOver(clay.ID("ScrollBar")) {
     scrollContainerData := clay.GetScrollContainerData(clay.ID("SongList"))
     scrollbarData.clickOrigin = UI_mousePos
     scrollbarData.positionOrigin = scrollContainerData.scrollPosition^
@@ -40,17 +42,16 @@ UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, scree
         scrollContainerData.contentDimensions.height / scrollContainerData.scrollContainerDimensions.height,
       }
       if scrollContainerData.config.vertical {
-        scrollContainerData.scrollPosition.y = scrollbarData.positionOrigin.y + (scrollbarData.clickOrigin.y - mousePos.y) * ratio.y
+        scrollContainerData.scrollPosition.y = scrollbarData.positionOrigin.y + (scrollbarData.clickOrigin.y - input.mousePos.y) * ratio.y
       }
       if scrollContainerData.config.horizontal {
-        scrollContainerData.scrollPosition.x = scrollbarData.positionOrigin.x + (scrollbarData.clickOrigin.x - mousePos.x) * ratio.x
+        scrollContainerData.scrollPosition.x = scrollbarData.positionOrigin.x + (scrollbarData.clickOrigin.x - input.mousePos.x) * ratio.x
       }
     }
   }
 
   playlist.activeSongChanged = false
-
-  if mouseDown {
+  if input.mouseLeftDown {
     iniActive := playlist.activeSongIdx
     for songIdx := 0; songIdx < len(playlist.songs); songIdx += 1
     {
@@ -60,17 +61,16 @@ UI_Prepare :: proc(playlist: ^Playlist, mousePos, mouseWheel: ray.Vector2, scree
     }
     if iniActive != playlist.activeSongIdx { playlist.activeSongChanged = true }
   }
-
   if playlist.activeSongChanged {
     //fmt.println("active song:", playlist.activeSong^)
-    ChangeLoadedMusicStream(playlist, playlist.activeSongIdx)
+    ChangeLoadedMusicStream(app, playlist.activeSongIdx)
   }
 
   SCROLL_INTENSITY :: 2
-  clay.UpdateScrollContainers(true, clay.Vector2{mouseWheel.x, mouseWheel.y*SCROLL_INTENSITY}, deltaTime)
+  clay.UpdateScrollContainers(true, clay.Vector2{input.mouseWheel.x, input.mouseWheel.y*SCROLL_INTENSITY}, input.deltaTime)
 }
 
-UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
+UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
   COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
@@ -89,6 +89,7 @@ UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(cla
   }
 
   sizingGrow0 := clay.SizingGrow({})
+  playlist := &app.playlist
 
   clay.BeginLayout()
 
@@ -125,12 +126,12 @@ UI_Calculate :: proc(playlist: ^Playlist, mouseDown: bool) -> clay.ClayArray(cla
       if clay.UI()({id = clay.ID("ActiveSongContainer"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT}) {
         clay.Text(activeSong.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
         clay.Text(activeSong.group, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
-        if musicLoaded {
+        if app.musicLoaded {
           if clay.UI()({id = clay.ID("MusicInfo"), layout = {sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}}, backgroundColor = COLOR_ORANGE}) {
-            musicLenSecs := int(ray.GetMusicTimeLength(music))
+            musicLenSecs := int(app.musicTimeLength)
             musicLenMins := musicLenSecs/60
             musicLenSecs %= 60
-            musicPlayedSecs := int(ray.GetMusicTimePlayed(music))
+            musicPlayedSecs := int(app.musicTimePlayed)
             musicPlayedMins := musicPlayedSecs/60
             musicPlayedSecs %= 60
             musicText := fmt.tprintf("song length: %2d:%2d\tplayed: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)

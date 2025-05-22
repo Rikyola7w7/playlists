@@ -61,6 +61,29 @@ Playlist :: struct {
   activeSongChanged: bool,
 }
 
+AppData :: struct {
+  volume: f32,
+  playlist: Playlist,
+  spall_backing_buffer: []u8,
+  screenWidth, screenHeight: i32,
+
+  music: ray.Music,
+  musicTimeLength: f32,
+  musicTimePlayed: f32,
+  musicLoaded: bool,
+  musicPause: bool,
+
+  fonts: [2]ray.Font,
+  playlistFileAbsPath: string,
+}
+
+Input :: struct {
+  deltaTime: f32,
+  mouseWheel: ray.Vector2,
+  mousePos: ray.Vector2,
+  mouseLeftDown: bool,
+}
+
 SortSongData :: proc(songs: []SongData)
 {
   groupLess :: proc(i, j: SongData) -> bool { return i.group < j.group }
@@ -275,16 +298,15 @@ ParseSongs_v1 :: proc(data: []u8) -> [dynamic]SongData
 Font_Inconsolata :: 0
 Font_LiberationMono :: 1
 
-music: ray.Music
-musicLoaded: bool
-
-ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
+ChangeLoadedMusicStream :: proc(app: ^AppData, newIdx: int)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  
+  playlist := &app.playlist
   if playlist.songs[playlist.activeSongIdx].source != "" {
-    if musicLoaded {
-      ray.UnloadMusicStream(music)
-      musicLoaded = false
+    if app.musicLoaded {
+      ray.UnloadMusicStream(app.music)
+      app.musicLoaded = false
     }
 
     activeSong := playlist.songs[newIdx]
@@ -296,20 +318,20 @@ ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
       case .File: {
         if os.exists(activeSong.source) {
           filename := strings.clone_to_cstring(activeSong.source, context.temp_allocator)
-          music = ray.LoadMusicStream(filename)
-          music.looping = false
-          ray.PlayMusicStream(music)
-          musicLoaded = true
+          app.music = ray.LoadMusicStream(filename)
+          app.music.looping = false
+          ray.PlayMusicStream(app.music)
+          app.musicLoaded = true
         }
         else {
           b: strings.Builder = strings.builder_make_len_cap(0, 40, context.temp_allocator)
           filepath := fmt.sbprintf(&b, "../songs/%s", activeSong.source)
           if os.exists(filepath) {
             file, _ := strings.to_cstring(&b)
-            music = ray.LoadMusicStream(file)
-            music.looping = false
-            ray.PlayMusicStream(music)
-            musicLoaded = true
+            app.music = ray.LoadMusicStream(file)
+            app.music.looping = false
+            ray.PlayMusicStream(app.music)
+            app.musicLoaded = true
           }
           else {
             fmt.println("Could not find song")
@@ -317,19 +339,10 @@ ChangeLoadedMusicStream :: proc(playlist: ^Playlist, newIdx: int)
         }
       }
     }
+
+    // NOTE: Gather 'static' data from app.music here
+    app.musicTimeLength = ray.GetMusicTimeLength(app.music)
   }
-}
-
-AppData :: struct {
-  volume: f32,
-  playlist: Playlist,
-  spall_backing_buffer: []u8,
-  screenWidth, screenHeight: i32,
-
-  musicPause: bool,
-
-  fonts: [2]ray.Font,
-  playlistFileAbsPath: string,
 }
 
 DataFile :: struct #packed {
@@ -471,17 +484,16 @@ DeInitAll :: proc(app: ^AppData)
   spall.context_destroy(&spall_ctx)
 }
 
-mouseLeftDown: bool
-Update :: proc(app: ^AppData)
+Update :: proc(app: ^AppData, input: ^Input)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 
-  ray.UpdateMusicStream(music)
+  ray.UpdateMusicStream(app.music)
 
-  if !app.musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+  if !app.musicPause && app.musicLoaded && !ray.IsMusicStreamPlaying(app.music) {
     newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
     app.playlist.activeSongIdx = newIdx
-    ChangeLoadedMusicStream(&app.playlist, newIdx)
+    ChangeLoadedMusicStream(app, newIdx)
   }
 
   // volume
@@ -494,33 +506,34 @@ Update :: proc(app: ^AppData)
     ray.SetMasterVolume(app.volume)
   }
 
-  // input
-  deltaTime := ray.GetFrameTime()
-  mousePos := ray.GetMousePosition()
-  mouseLeftDown = ray.IsMouseButtonDown(.LEFT)
-  mouseWheel : ray.Vector2 = ray.GetMouseWheelMoveV()
+  app.musicTimePlayed = ray.GetMusicTimePlayed(app.music)
+
+  input.deltaTime = ray.GetFrameTime()
+  input.mousePos = ray.GetMousePosition()
+  input.mouseLeftDown = ray.IsMouseButtonDown(.LEFT)
+  input.mouseWheel = ray.GetMouseWheelMoveV()
   app.screenWidth = ray.GetScreenWidth()
   app.screenHeight = ray.GetScreenHeight()
 
-  if musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
+  if app.musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
     app.musicPause = !app.musicPause
-    if app.musicPause { ray.PauseMusicStream(music) }
-    else { ray.ResumeMusicStream(music) }
+    if app.musicPause { ray.PauseMusicStream(app.music) }
+    else { ray.ResumeMusicStream(app.music) }
   }
 
   //timePlayed := ray.GetMusicTimePlayed(music)/ray.GetMusicTimeLength(music)
   //fmt.println(timePlayed)
 
-  UI_Prepare(&app.playlist, mousePos, mouseWheel, app.screenWidth, app.screenHeight, mouseLeftDown, deltaTime)
+  UI_Prepare(app, input)
 }
 
-Render :: proc(app: ^AppData)
+Render :: proc(app: ^AppData, input: ^Input)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 
   // Generate the auto layout for rendering
   //currentTime := ray.GetTime()
-  UIRenderCommands := UI_Calculate(&app.playlist, mouseLeftDown)
+  UIRenderCommands := UI_Calculate(app, input.mouseLeftDown)
 
   ray.BeginDrawing()
   ray.ClearBackground(ray.BLACK)
@@ -537,8 +550,9 @@ main :: proc()
   defer DeInitAll(&app)
 
   // NOTE: Starting up audio takes very long so I do a 'fake' ui first
+  input: Input
   {
-    Render(&app)
+    Render(&app, &input)
     ray.InitAudioDevice()
   }
 
@@ -550,17 +564,17 @@ main :: proc()
 
     if ray.IsWindowMinimized() {
       // TODO: Also decrease fps?
-      ray.UpdateMusicStream(music)
-      if !app.musicPause && musicLoaded && !ray.IsMusicStreamPlaying(music) {
+      ray.UpdateMusicStream(app.music)
+      if !app.musicPause && app.musicLoaded && !ray.IsMusicStreamPlaying(app.music) {
         newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
         app.playlist.activeSongIdx = newIdx
-        ChangeLoadedMusicStream(&app.playlist, newIdx)
+        ChangeLoadedMusicStream(&app, newIdx)
       }
       ray.BeginDrawing(); ray.EndDrawing() // end frame
     }
     else {
-      Update(&app)
-      Render(&app)
+      Update(&app, &input)
+      Render(&app, &input)
     }
   }
 }
