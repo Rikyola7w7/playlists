@@ -11,33 +11,6 @@ import "core:path/filepath"
 import "core:prof/spall"
 import ray "vendor:raylib"
 
-/* TODO:
-[ ] Actual error messages
-[ ] Improve parser to show errors
-[ ] Different thing for active song and playing song, so I can check out info on a song that
-    I'm not playing and if I go back to the playing song it doesn't start over
-[ ] Automatic scroll down when getting to a song that is offscreen (maybe two before ?)
-[x] Store the songs as []^SongData pointing to a []SongData array
-[x] Store a file for session data
-
-UI:
-[ ] UI for adding a song to the list
-[ ] UI to show the amount of song left as a bar
-[ ] UI to randomize list order (call the ShuffleSongs proc)
-[ ] UI to sort list order by various properties (artist, alphabetical, ...)
-[ ] UI to show the details of a song without playing it
-[ ] UI for volume controls (slider + info)
-[ ] UI rework
-
-[ ] Probably no way to do it in raylib, but try to find out if I can keep the music playing while moving/resizing the window ?
-[ ] Icon (winows only ?)
-
-Performance:
-[x] Spall measurements
-[ ] Thread pool for thread work, will do when more work on threads is required
-[ ] ChangeLoadedMusicStream in a different thread so it doesn't stall (it sometimes does for a more than a frame)
-*/
-
 spall_ctx: spall.Context
 @(thread_local) spall_buffer: spall.Buffer
 

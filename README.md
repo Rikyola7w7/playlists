@@ -8,6 +8,8 @@ As a side note, I deleted most of the work done in this project by accident so a
 
 WARNING: This software is unfinished and subject to change, until any releases are made in github, it will most likely not be stable
 
+For planned updates/fixes, see TODO.txt
+
 ## Usage
 
 Run with a playlist file or a directory
