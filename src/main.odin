@@ -342,6 +342,7 @@ ChangeLoadedMusicStream :: proc(app: ^AppData, newIdx: int)
 
     // NOTE: Gather 'static' data from app.music here
     app.musicTimeLength = ray.GetMusicTimeLength(app.music)
+    app.musicTimePlayed = 0.0
   }
 }
 
@@ -484,16 +485,27 @@ DeInitAll :: proc(app: ^AppData)
   spall.context_destroy(&spall_ctx)
 }
 
+NextSong :: proc(app: ^AppData) {
+  newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
+  app.playlist.activeSongIdx = newIdx
+  ChangeLoadedMusicStream(app, newIdx)
+}
+
+PrevSong :: proc(app: ^AppData) {
+  newIdx := (app.playlist.activeSongIdx - 1) %% len(app.playlist.songs)
+  app.playlist.activeSongIdx = newIdx
+  ChangeLoadedMusicStream(app, newIdx)
+}
+
 Update :: proc(app: ^AppData, input: ^Input)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
 
   ray.UpdateMusicStream(app.music)
 
+  // If the song finished, go to the next
   if !app.musicPause && app.musicLoaded && !ray.IsMusicStreamPlaying(app.music) {
-    newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
-    app.playlist.activeSongIdx = newIdx
-    ChangeLoadedMusicStream(app, newIdx)
+    NextSong(app)
   }
 
   // volume
@@ -506,7 +518,33 @@ Update :: proc(app: ^AppData, input: ^Input)
     ray.SetMasterVolume(app.volume)
   }
 
+  // song control
   app.musicTimePlayed = ray.GetMusicTimePlayed(app.music)
+  if ray.IsKeyPressed(.RIGHT) {
+    app.musicTimePlayed = min(app.musicTimePlayed + 5.0, app.musicTimeLength)
+    ray.SeekMusicStream(app.music, app.musicTimePlayed)
+  } else if ray.IsKeyPressed(.LEFT) {
+    app.musicTimePlayed = max(app.musicTimePlayed - 5.0, 0.0)
+    ray.SeekMusicStream(app.music, app.musicTimePlayed)
+  }
+  if ray.IsKeyPressed(.L) {
+    app.musicTimePlayed = min(app.musicTimePlayed + 10.0, app.musicTimeLength)
+    ray.SeekMusicStream(app.music, app.musicTimePlayed)
+  } else if ray.IsKeyPressed(.J) {
+    app.musicTimePlayed = max(app.musicTimePlayed - 10.0, 0.0)
+    ray.SeekMusicStream(app.music, app.musicTimePlayed)
+  }
+
+  if ray.IsKeyPressed(.END) {
+    NextSong(app)
+  } else if ray.IsKeyPressed(.HOME) {
+    if app.musicTimePlayed < 12.0 {
+      PrevSong(app)
+    } else {
+      ray.SeekMusicStream(app.music, 0.0)
+      app.musicTimePlayed = 0.0
+    }
+  }
 
   input.deltaTime = ray.GetFrameTime()
   input.mousePos = ray.GetMousePosition()
@@ -515,7 +553,7 @@ Update :: proc(app: ^AppData, input: ^Input)
   app.screenWidth = ray.GetScreenWidth()
   app.screenHeight = ray.GetScreenHeight()
 
-  if app.musicLoaded && (ray.IsKeyPressed(.P) || ray.IsKeyPressed(.SPACE)) {
+  if app.musicLoaded && (ray.IsKeyPressed(.K) || ray.IsKeyPressed(.SPACE)) {
     app.musicPause = !app.musicPause
     if app.musicPause { ray.PauseMusicStream(app.music) }
     else { ray.ResumeMusicStream(app.music) }
