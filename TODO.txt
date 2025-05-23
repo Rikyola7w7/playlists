@@ -13,7 +13,9 @@ UI:
 [ ] UI to sort list order by various properties (artist, alphabetical, ...)
 [ ] UI to show the details of a song without playing it
 [ ] UI for volume controls (slider + info)
-[ ] UI rework
+[ ] UI colors T-T
+[ ] UI rework ?
+[ ] Possibility for different color themes ?
 
 [ ] Probably no way to do it in raylib, but try to find out if I can keep the music playing while moving/resizing the window ?
 [ ] Icon (winows only ?)
