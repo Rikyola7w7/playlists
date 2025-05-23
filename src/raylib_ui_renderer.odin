@@ -17,15 +17,15 @@ Clay_Init :: proc(fonts: [^]ray.Font, screenWidth, screenHeight: i32)
     //}
   }
 
-  min_memory_size: u32 = clay.MinMemorySize()
+  min_memory_size := uint(clay.MinMemorySize())
   memory := make([^]u8, min_memory_size)
   arena: clay.Arena = clay.CreateArenaWithCapacityAndMemory(min_memory_size, memory)
   clay.Initialize(arena, { width = f32(screenWidth), height = f32(screenHeight) }, { handler = error_handler })
 
-  clay.SetMeasureTextFunction(Raylib_MeasureText, cast(uintptr)fonts)
+  clay.SetMeasureTextFunction(Raylib_MeasureText, fonts)
 }
 
-Raylib_MeasureText :: proc "c"(text: clay.StringSlice, config: ^clay.TextElementConfig, userData: uintptr) -> clay.Dimensions
+Raylib_MeasureText :: proc "c"(text: clay.StringSlice, config: ^clay.TextElementConfig, userData: rawptr) -> clay.Dimensions
 {
   textSize : clay.Dimensions = ---
 

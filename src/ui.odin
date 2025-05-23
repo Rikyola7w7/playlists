@@ -98,14 +98,14 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
       sizing = {width = clay.SizingFixed(300), height = sizingGrow0}, padding = {0, 0, 0, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT})
     {
       if clay.UI()({id = clay.ID("Playlist"), layout = {layoutDirection = .TopToBottom, padding = {16,16,16,16}, sizing = {sizingGrow0, sizingGrow0}}, backgroundColor = COLOR_ORANGE}) {
-        clay.Text(playlist.name, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
+        clay.TextDynamic(playlist.name, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
         songCountText := fmt.tprintf("%d songs", len(playlist.songs))
-        clay.Text(songCountText, clay.TextConfig({fontSize = 12, textColor = {0, 0, 0, 255}}))
+        clay.TextDynamic(songCountText, clay.TextConfig({fontSize = 12, textColor = {0, 0, 0, 255}}))
       }
 
       if clay.UI()({id = clay.ID("SongList"),
         layout = {layoutDirection = .TopToBottom, padding = {16, 24, 0, 0}, childGap = 6, sizing = {width = sizingGrow0}},
-        scroll = {vertical = true}})
+        clip = {vertical = true, childOffset = clay.GetScrollOffset()}})
       {
         for songIdx := 0; songIdx < len(playlist.songs); songIdx += 1
         {
@@ -113,29 +113,36 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
           if clay.UI()({id = clay.ID("song", u32(songIdx)),
             layout = {sizing = {clay.SizingGrow({}), clay.SizingGrow({})}, padding = {16,16,16,16}},
             backgroundColor = clay.Hovered() ? (mouseDown ? {176, 90, 34, 255} : {200, 110, 40, 255}) : COLOR_ORANGE}) {
-            clay.Text(song.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
+            clay.TextDynamic(song.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
           }
         }
       }
-
-      //if clay.UI()({id = clay.ID("MainContent"), layout = {sizing = {sizingGrow0, sizingGrow0}}, backgroundColor = COLOR_LIGHT}) {}
     }
 
     if playlist.activeSongIdx != -1 {
       activeSong := playlist.songs[playlist.activeSongIdx]
       if clay.UI()({id = clay.ID("ActiveSongContainer"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT}) {
-        clay.Text(activeSong.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
-        clay.Text(activeSong.group, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
+        clay.TextDynamic(activeSong.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
+        clay.TextDynamic(activeSong.group, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
         if app.musicLoaded {
-          if clay.UI()({id = clay.ID("MusicInfo"), layout = {sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}}, backgroundColor = COLOR_ORANGE}) {
+          if clay.UI()({id = clay.ID("MusicInfo"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 8}, backgroundColor = COLOR_ORANGE}) {
             musicLenSecs := int(app.musicTimeLength)
             musicLenMins := musicLenSecs/60
             musicLenSecs %= 60
             musicPlayedSecs := int(app.musicTimePlayed)
             musicPlayedMins := musicPlayedSecs/60
             musicPlayedSecs %= 60
-            musicText := fmt.tprintf("song length: %2d:%2d\tplayed: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
-            clay.Text(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
+            musicText := fmt.tprintf("song length: %2d:%2d      played: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
+            clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
+
+            if clay.UI()({id = clay.ID("SongProgressSlider"), layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
+              if clay.UI()({layout = {sizing = {clay.SizingPercent(app.musicTimePlayed/app.musicTimeLength), clay.SizingFixed(20)}}, backgroundColor = COLOR_BLUE}) {}
+              if clay.UI()({layout = {sizing = {clay.SizingFixed(30), clay.SizingFixed(30)}}, cornerRadius = clay.CornerRadiusAll(4), backgroundColor = COLOR_RED}) {}
+              if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_BLUE}) {}
+            }
+/*              if clay.UI()({id = clay.ID("SongProgressSliderDot"), floating = {offset = {app.musicTimePlayed/app.musicTimeLength, 0}}, layout = {sizing = {clay.SizingFixed(40), clay.sizingFixed(40)}}}) {
+
+              }*/
           }
         }
       }
