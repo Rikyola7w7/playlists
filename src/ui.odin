@@ -76,6 +76,7 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
   COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
   COLOR_BLUE :: clay.Color{111, 173, 162, 255}
   COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
+  COLOR_DARKBLUE :: clay.Color{10, 86, 86, 255}
   COLOR_RED :: clay.Color{168, 66, 28, 255}
 
   CLAY_BORDER_OUTSIDE :: #force_inline proc(widthValue: u16) -> clay.BorderWidth
@@ -136,13 +137,15 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
             clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
 
             if clay.UI()({id = clay.ID("SongProgressSlider"), layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
-              if clay.UI()({layout = {sizing = {clay.SizingPercent(app.musicTimePlayed/app.musicTimeLength), clay.SizingFixed(20)}}, backgroundColor = COLOR_BLUE}) {}
-              if clay.UI()({layout = {sizing = {clay.SizingFixed(30), clay.SizingFixed(30)}}, cornerRadius = clay.CornerRadiusAll(4), backgroundColor = COLOR_RED}) {}
-              if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_BLUE}) {}
+              if clay.UI()({layout = {sizing = {clay.SizingPercent(app.musicTimePlayed/app.musicTimeLength), clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
+              if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}}) {
+                // NOTE: Outside border
+                if clay.UI()({floating = {attachTo = .Parent, attachment = {.CenterCenter, .CenterCenter}}, layout = {sizing = {clay.SizingFixed(24), clay.SizingFixed(24)}, childAlignment = {.Center, .Center}}, /* border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(4), backgroundColor = {40, 40, 40, 255}}) {
+                  if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
+                }
+              }
+              if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
             }
-/*              if clay.UI()({id = clay.ID("SongProgressSliderDot"), floating = {offset = {app.musicTimePlayed/app.musicTimeLength, 0}}, layout = {sizing = {clay.SizingFixed(40), clay.sizingFixed(40)}}}) {
-
-              }*/
           }
         }
       }
