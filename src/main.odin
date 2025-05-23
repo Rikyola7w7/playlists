@@ -96,13 +96,6 @@ SortSongData :: proc(songs: []SongData)
   }
 }
 
-// NOTE: I don't really need this function, it's mostly here so odin doesn't complain
-//       about an unused import while I haven't used the shuffle anywhere
-ShuffleSongs :: #force_inline proc(songs: []SongData)
-{
-  rand.shuffle(songs)
-}
-
 CountSongs :: proc(songs: []SongData)
 {
   prevGroup := songs[0].group
@@ -517,6 +510,14 @@ Update :: proc(app: ^AppData, input: ^Input)
       ray.SeekMusicStream(app.music, 0.0)
       app.musicTimePlayed = 0.0
     }
+  }
+  
+  // NOTE: Randomize song order
+  if ray.IsKeyPressed(.R) {
+    app.playlist.activeSongIdx = 0
+    app.musicPause = false
+    rand.shuffle(app.playlist.songs[:])
+    ChangeLoadedMusicStream(app, 0)
   }
 
   input.deltaTime = ray.GetFrameTime()
