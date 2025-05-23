@@ -508,9 +508,9 @@ Update :: proc(app: ^AppData, input: ^Input)
     ray.SeekMusicStream(app.music, app.musicTimePlayed)
   }
 
-  if ray.IsKeyPressed(.END) {
+  if ray.IsKeyPressed(.END) || ray.IsKeyPressed(.KP_1) {
     NextSong(app)
-  } else if ray.IsKeyPressed(.HOME) {
+  } else if ray.IsKeyPressed(.HOME) || ray.IsKeyPressed(.KP_7) {
     if app.musicTimePlayed < 12.0 {
       PrevSong(app)
     } else {
