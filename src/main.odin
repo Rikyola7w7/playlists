@@ -11,9 +11,6 @@ import "core:path/filepath"
 import "core:prof/spall"
 import ray "vendor:raylib"
 
-spall_ctx: spall.Context
-@(thread_local) spall_buffer: spall.Buffer
-
 SortSongData :: proc(songs: []SongData)
 {
   groupLess :: proc(i, j: SongData) -> bool { return i.group < j.group }
@@ -140,9 +137,9 @@ ParseSingleSong :: proc(text: ^string) -> (SongData, bool)
   return song, !nok
 }
 
-ParseSongs :: proc(data: []u8) -> [dynamic]SongData
+ParseSongs :: proc(app: ^AppData, data: []u8) -> [dynamic]SongData
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
   songs: [dynamic]SongData
 
   source := string(data)
@@ -220,7 +217,7 @@ ParseSongs_v1 :: proc(data: []u8) -> [dynamic]SongData
 
 ChangeLoadedMusicStream :: proc(app: ^AppData, newIdx: int)
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
   
   playlist := &app.playlist
   if playlist.songs[playlist.activeSongIdx].source != "" {
@@ -297,6 +294,11 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   app := cast(^AppData)rawApp
   input := cast(^Input)rawInput
 
+  app.spall_ctx = spall.context_create("trace.spall")
+  app.spall_backing_buffer = make([]u8, spall.BUFFER_DEFAULT_SIZE)
+  app.spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
+
   listFile := os.args[1] if len(os.args) > 1 else ""
 
   ok: bool
@@ -342,7 +344,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
     else {
       data, ok = os.read_entire_file(listFile)
       assert(ok)
-      songData = ParseSongs(data)
+      songData = ParseSongs(app, data)
     }
   }
   else {
@@ -386,10 +388,6 @@ InitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
   app := cast(^AppData)rawApp
   //input := cast(^Input)rawInput
 
-  spall_ctx = spall.context_create("trace.spall")
-  app.spall_backing_buffer = make([]u8, spall.BUFFER_DEFAULT_SIZE)
-  spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
-
   InitClay(app)
 }
 
@@ -397,15 +395,10 @@ InitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
 DeInitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
 {
   // Here, close anything that needs to be restarted each time a new dll comes
-  app := cast(^AppData)rawApp
+  //app := cast(^AppData)rawApp
   //input := cast(^Input)rawInput
 
   Clay_Close()
-
-  // NOTE: Spall deInit
-  spall.buffer_destroy(&spall_ctx, &spall_buffer)
-  delete(app.spall_backing_buffer)
-  spall.context_destroy(&spall_ctx)
 }
 
 @export
@@ -438,6 +431,11 @@ DeInitAll :: proc(rawApp: rawptr, rawInput: rawptr)
     os.close(dF)
   }
 
+  // NOTE: Spall deInit
+  spall.buffer_destroy(&app.spall_ctx, &app.spall_buffer)
+  delete(app.spall_backing_buffer)
+  spall.context_destroy(&app.spall_ctx)
+
   delete(app.playlist.songs)
   delete(app.playlist.songData)
   free(app)
@@ -460,7 +458,7 @@ PrevSong :: proc(app: ^AppData) {
 
 Update :: proc(app: ^AppData, input: ^Input)
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
 
   ray.UpdateMusicStream(app.music)
 
@@ -536,11 +534,11 @@ Update :: proc(app: ^AppData, input: ^Input)
 
 Render :: proc(app: ^AppData, input: ^Input)
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
 
   // Generate the auto layout for rendering
   //currentTime := ray.GetTime()
-  UIRenderCommands := UI_Calculate(app, input.mouseLeftDown)
+  UIRenderCommands := UI_Calculate(app, input)
 
   ray.BeginDrawing()
   ray.ClearBackground(ray.BLACK)
@@ -555,7 +553,7 @@ MainLoop :: proc(rawApp: rawptr, rawInput: rawptr) -> bool
 {
   app := cast(^AppData)rawApp
   input := cast(^Input)rawInput
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, "update & render")
 
   free_all(context.temp_allocator)
 

@@ -1,5 +1,6 @@
 package main
 
+import "core:prof/spall"
 import ray "vendor:raylib"
 
 SongSourceType :: enum {
@@ -22,7 +23,11 @@ Playlist :: struct {
   activeSongChanged: bool,
 }
 
+
 AppData :: struct {
+  spall_ctx: spall.Context,
+  spall_buffer: spall.Buffer, // NOTE: This must be one per thread
+  
   volume: f32,
   playlist: Playlist,
   spall_backing_buffer: []u8,

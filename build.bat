@@ -33,7 +33,7 @@ if not exist %DLL_DIR% mkdir %DLL_DIR%
 :: game and it also makes sure we don't have so many PDBs laying around.
 if %APP_RUNNING% == false (
   del /q /s %DLL_DIR% >nul 2>nul
-  del /q /s %PDB_DIR% >nul 2>nul
+  del /q %PDBS_DIR%\* >nul 2>nul
   if not exist "%PDBS_DIR%" mkdir %PDBS_DIR%
   echo 0 > %PDBS_DIR%\pdb_number
 )
@@ -41,9 +41,9 @@ if %APP_RUNNING% == false (
 :: Load PDB number from file, increment and store back. For as long as the app
 :: is running the pdb_number file won't be reset to 0, so we'll get a PDB of a
 :: unique name on each hot reload.
-set /p PDB_NUMBER=<%GAME_PDBS_DIR%\pdb_number
+set /p PDB_NUMBER=<%PDBS_DIR%\pdb_number
 set /a PDB_NUMBER=%PDB_NUMBER%+1
-echo %PDB_NUMBER% > %GAME_PDBS_DIR%\pdb_number
+echo %PDB_NUMBER% > %PDBS_DIR%\pdb_number
 
 odin build src -vet -vet-using-param -vet-style -debug -define:RAYLIB_SHARED=true -build-mode:dll -out:%OUT_DIR%\app.dll -pdb-name:%PDBS_DIR%\app_%PDB_NUMBER%.pdb > nul
 if %ERRORLEVEL% neq 0 exit /b 1

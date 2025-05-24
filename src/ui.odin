@@ -72,7 +72,7 @@ Raylib_MeasureText :: proc "c"(text: clay.StringSlice, config: ^clay.TextElement
 
 UI_Prepare :: proc(app: ^AppData, input: ^Input)
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
   @static UI_debug := false
   @static scrollbarData: struct {
     clickOrigin, positionOrigin: clay.Vector2,
@@ -135,11 +135,11 @@ UI_Prepare :: proc(app: ^AppData, input: ^Input)
   clay.UpdateScrollContainers(true, clay.Vector2{input.mouseWheel.x, input.mouseWheel.y*SCROLL_INTENSITY}, input.deltaTime)
 }
 
-UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
+UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.RenderCommand)
 {
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
-  //COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
-  COLOR_ORANGE :: clay.Color{10, 138, 50, 255}
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
+  COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
+  //COLOR_ORANGE :: clay.Color{10, 138, 50, 255}
   COLOR_BLUE :: clay.Color{111, 173, 162, 255}
   COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
   COLOR_DARKBLUE :: clay.Color{10, 86, 86, 255}
@@ -179,7 +179,7 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
           song := playlist.songs[songIdx]
           if clay.UI()({id = clay.ID("song", u32(songIdx)),
             layout = {sizing = {clay.SizingGrow({}), clay.SizingGrow({})}, padding = {16,16,16,16}},
-            backgroundColor = clay.Hovered() ? (mouseDown ? {176, 90, 34, 255} : {200, 110, 40, 255}) : COLOR_ORANGE}) {
+            backgroundColor = clay.Hovered() ? (input.mouseLeftDown ? {176, 90, 34, 255} : {200, 110, 40, 255}) : COLOR_ORANGE}) {
             clay.TextDynamic(song.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
           }
         }
