@@ -292,18 +292,10 @@ InitClay :: proc(app: ^AppData)
 }
 
 @export
-InitAll :: proc() -> (rawApp: rawptr, rawInput: rawptr)
+InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
 {
-  app := new(AppData)
-  input := new(Input)
-  rawApp = rawptr(app)
-  rawInput = rawptr(input)
-
-  // NOTE: Spall init
-  spall_ctx = spall.context_create("trace.spall")
-  app.spall_backing_buffer = make([]u8, spall.BUFFER_DEFAULT_SIZE)
-  spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
-  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
+  app := cast(^AppData)rawApp
+  input := cast(^Input)rawInput
 
   listFile := os.args[1] if len(os.args) > 1 else ""
 
@@ -357,7 +349,7 @@ InitAll :: proc() -> (rawApp: rawptr, rawInput: rawptr)
     fmt.printfln("Usage: %s playlist", os.args[0])
     os.exit(0)
   }
-
+  
   songs := make([dynamic]^SongData, len(songData), len(songData))
   for i := 0; i < len(songData); i += 1 { songs[i] = &songData[i] }
   app.playlist = Playlist{
@@ -373,7 +365,7 @@ InitAll :: proc() -> (rawApp: rawptr, rawInput: rawptr)
   if app.volume == 0 { app.volume = 0.18 }
 
   InitRaylib(app)
-  InitClay(app)
+  InitPartial(rawApp, rawInput)
 
   // NOTE: Starting up audio takes very long so I do a 'fake' ui first
   {
@@ -388,10 +380,40 @@ InitAll :: proc() -> (rawApp: rawptr, rawInput: rawptr)
 }
 
 @export
-DeInitAll :: proc(rawApp: rawptr)
+InitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
+{
+  // Here, startup anything that needs to be restarted each time a new dll comes
+  app := cast(^AppData)rawApp
+  //input := cast(^Input)rawInput
+
+  spall_ctx = spall.context_create("trace.spall")
+  app.spall_backing_buffer = make([]u8, spall.BUFFER_DEFAULT_SIZE)
+  spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
+
+  InitClay(app)
+}
+
+@export
+DeInitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
+{
+  // Here, close anything that needs to be restarted each time a new dll comes
+  app := cast(^AppData)rawApp
+  //input := cast(^Input)rawInput
+
+  Clay_Close()
+
+  // NOTE: Spall deInit
+  spall.buffer_destroy(&spall_ctx, &spall_buffer)
+  delete(app.spall_backing_buffer)
+  spall.context_destroy(&spall_ctx)
+}
+
+@export
+DeInitAll :: proc(rawApp: rawptr, rawInput: rawptr)
 {
   app := cast(^AppData)rawApp
-  Clay_Close()
+  input := cast(^Input)rawInput
+  DeInitPartial(rawApp, rawInput)
 
   for &f in app.fonts { ray.UnloadFont(f) }
   ray.CloseAudioDevice()
@@ -418,12 +440,11 @@ DeInitAll :: proc(rawApp: rawptr)
 
   delete(app.playlist.songs)
   delete(app.playlist.songData)
-
-  // NOTE: Spall deInit
-  spall.buffer_destroy(&spall_ctx, &spall_buffer)
-  delete(app.spall_backing_buffer)
-  spall.context_destroy(&spall_ctx)
+  free(app)
+  free(input)
 }
+
+@export MemorySize :: proc() -> (int, int) { return size_of(AppData), size_of(Input) }
 
 NextSong :: proc(app: ^AppData) {
   newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
@@ -535,6 +556,8 @@ MainLoop :: proc(rawApp: rawptr, rawInput: rawptr) -> bool
   app := cast(^AppData)rawApp
   input := cast(^Input)rawInput
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
+
+  free_all(context.temp_allocator)
 
   shouldQuit := ray.WindowShouldClose()
   if ray.IsWindowMinimized() {

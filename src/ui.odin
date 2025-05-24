@@ -138,7 +138,8 @@ UI_Prepare :: proc(app: ^AppData, input: ^Input)
 UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.RenderCommand)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
-  COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
+  //COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
+  COLOR_ORANGE :: clay.Color{10, 138, 50, 255}
   COLOR_BLUE :: clay.Color{111, 173, 162, 255}
   COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
   COLOR_DARKBLUE :: clay.Color{10, 86, 86, 255}
