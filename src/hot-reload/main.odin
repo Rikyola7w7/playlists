@@ -112,7 +112,7 @@ UnloadApi :: proc(api: ^Api)
 }
 
 CompareSizes :: proc(size1old, size2old, size1new, size2new: int) -> bool {
-  return size1old != size1new || size2old != size2new
+  return (size1old != size1new) || (size2old != size2new)
 }
 
 main :: proc() {

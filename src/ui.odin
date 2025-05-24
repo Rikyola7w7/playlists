@@ -8,6 +8,9 @@ import clay "clay-odin"
 Font_Inconsolata :: 0
 Font_LiberationMono :: 1
 
+
+ELEMENT_ID_NIL :: clay.ElementId{ 0, 0, 0, clay.String{true, 0, nil} }
+
 Clay_Init :: proc(fonts: [^]ray.Font, screenWidth, screenHeight: i32)
 {
   error_handler :: proc "c" (errorData: clay.ErrorData) {
@@ -135,15 +138,50 @@ UI_Prepare :: proc(app: ^AppData, input: ^Input)
   clay.UpdateScrollContainers(true, clay.Vector2{input.mouseWheel.x, input.mouseWheel.y*SCROLL_INTENSITY}, input.deltaTime)
 }
 
+COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
+//COLOR_ORANGE :: clay.Color{10, 138, 50, 255}
+COLOR_BLUE :: clay.Color{111, 173, 162, 255}
+COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
+COLOR_DARKBLUE :: clay.Color{10, 86, 86, 255}
+COLOR_RED :: clay.Color{168, 66, 28, 255}
+
+// clay.SizingGrow({})
+sizingGrow0 :: clay.SizingAxis{type = .Grow}
+
+SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
+{
+  if clay.UI()({id = id, layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
+    dotSize: f32 = 24
+    percentage := app.musicTimePlayed/app.musicTimeLength
+    if clay.Hovered() {
+      if input.mouseLeftDown { app.sliderSelected = id }
+    }
+    if app.sliderSelected.id == id.id {
+      sliderData := clay.GetElementData(id)
+      if sliderData.found {
+        percentage = (input.mousePos.x - sliderData.boundingBox.x - dotSize/2) / sliderData.boundingBox.width
+        percentage = max(min(percentage, 1.0), 0.0)
+        if input.mouseLeftReleased {
+          ray.SeekMusicStream(app.music, percentage*app.musicTimeLength)
+          app.sliderSelected = ELEMENT_ID_NIL
+        }
+      }
+    }
+
+    if clay.UI()({layout = {sizing = {clay.SizingPercent(percentage), clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
+    if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}}) {
+      // NOTE: Outside border
+      if clay.UI()({floating = {attachTo = .Parent, attachment = {.CenterCenter, .CenterCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /* border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(4), backgroundColor = {40, 40, 40, 255}}) {
+        if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
+      }
+    }
+    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
+  }
+}
+
 UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.RenderCommand)
 {
   spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
-  COLOR_ORANGE :: clay.Color{225, 138, 50, 255}
-  //COLOR_ORANGE :: clay.Color{10, 138, 50, 255}
-  COLOR_BLUE :: clay.Color{111, 173, 162, 255}
-  COLOR_LIGHT :: clay.Color{224, 215, 210, 255}
-  COLOR_DARKBLUE :: clay.Color{10, 86, 86, 255}
-  COLOR_RED :: clay.Color{168, 66, 28, 255}
 
   CLAY_BORDER_OUTSIDE :: #force_inline proc(widthValue: u16) -> clay.BorderWidth
   {
@@ -155,7 +193,6 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
     return clay.GetElementId(clay.MakeString(id))
   }
 
-  sizingGrow0 := clay.SizingGrow({})
   playlist := &app.playlist
 
   clay.BeginLayout()
@@ -202,15 +239,8 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
             musicText := fmt.tprintf("song length: %2d:%2d      played: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
             clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
 
-            if clay.UI()({id = clay.ID("SongProgressSlider"), layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, padding = {8, 8, 0, 0}, childAlignment = {.Center, .Center}}}) {
-              if clay.UI()({layout = {sizing = {clay.SizingPercent(app.musicTimePlayed/app.musicTimeLength), clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
-              if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}}) {
-                // NOTE: Outside border
-                if clay.UI()({floating = {attachTo = .Parent, attachment = {.CenterCenter, .CenterCenter}}, layout = {sizing = {clay.SizingFixed(24), clay.SizingFixed(24)}, childAlignment = {.Center, .Center}}, /* border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(4), backgroundColor = {40, 40, 40, 255}}) {
-                  if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
-                }
-              }
-              if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
+            if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, padding = {4, 4, 0, 0}}}) {
+              SongSlider(app, input, clay.ID("SongProgressSlider"))
             }
           }
         }

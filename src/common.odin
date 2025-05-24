@@ -2,6 +2,7 @@ package main
 
 import "core:prof/spall"
 import ray "vendor:raylib"
+import clay "clay-odin"
 
 SongSourceType :: enum {
   None, /* no song source */
@@ -23,7 +24,6 @@ Playlist :: struct {
   activeSongChanged: bool,
 }
 
-
 AppData :: struct {
   spall_ctx: spall.Context,
   spall_buffer: spall.Buffer, // NOTE: This must be one per thread
@@ -41,6 +41,7 @@ AppData :: struct {
   musicPause: bool,
 
   fonts: [2]ray.Font,
+  sliderSelected: clay.ElementId,
 
   playlistFileAbsPath: string,
 }
@@ -50,4 +51,5 @@ Input :: struct {
   mouseWheel: [2]f32,
   mousePos: [2]f32,
   mouseLeftDown: bool,
+  mouseLeftReleased: bool,
 }
