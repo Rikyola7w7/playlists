@@ -14,49 +14,6 @@ import ray "vendor:raylib"
 spall_ctx: spall.Context
 @(thread_local) spall_buffer: spall.Buffer
 
-SongSourceType :: enum {
-  None, /* no song source */
-  File, /* song is stored locally */
-  Link, /* need to look for the song online */
-}
-
-SongData :: struct {
-  group, name, album: string,
-  source: string,
-  sourceType: SongSourceType,
-}
-
-Playlist :: struct {
-  songData: [dynamic]SongData, // NOTE: Should keep original order
-  songs: [dynamic]^SongData,
-  name: string,
-  activeSongIdx: int,
-  activeSongChanged: bool,
-}
-
-AppData :: struct {
-  volume: f32,
-  playlist: Playlist,
-  spall_backing_buffer: []u8,
-  screenWidth, screenHeight: i32,
-
-  music: ray.Music,
-  musicTimeLength: f32,
-  musicTimePlayed: f32,
-  musicLoaded: bool,
-  musicPause: bool,
-
-  fonts: [2]ray.Font,
-  playlistFileAbsPath: string,
-}
-
-Input :: struct {
-  deltaTime: f32,
-  mouseWheel: ray.Vector2,
-  mousePos: ray.Vector2,
-  mouseLeftDown: bool,
-}
-
 SortSongData :: proc(songs: []SongData)
 {
   groupLess :: proc(i, j: SongData) -> bool { return i.group < j.group }
@@ -261,9 +218,6 @@ ParseSongs_v1 :: proc(data: []u8) -> [dynamic]SongData
   return songs
 }
 
-Font_Inconsolata :: 0
-Font_LiberationMono :: 1
-
 ChangeLoadedMusicStream :: proc(app: ^AppData, newIdx: int)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
@@ -319,8 +273,32 @@ DataFile :: struct #packed {
 }
 DATAFILE_NAME :: "prog.dat"
 
-InitAll :: proc(app: ^AppData)
+InitRaylib :: proc(app: ^AppData)
 {
+  ray.SetTraceLogLevel(.WARNING)
+  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT, .WINDOW_ALWAYS_RUN}) // WINDOW_HIGHDPI
+  app.screenWidth = 1000
+  app.screenHeight = 800
+  ray.InitWindow(app.screenWidth, app.screenHeight, "playlist viewer")
+}
+
+InitClay :: proc(app: ^AppData)
+{
+  app.fonts[Font_Inconsolata] = ray.LoadFontEx("../resources/Inconsolata-Regular.ttf", 48, nil, 400)
+  ray.SetTextureFilter(app.fonts[Font_Inconsolata].texture, .BILINEAR)
+  app.fonts[Font_LiberationMono] = ray.LoadFontEx("../resources/liberation-mono.ttf", 48, nil, 400)
+  ray.SetTextureFilter(app.fonts[Font_LiberationMono].texture, .BILINEAR)
+  Clay_Init(&app.fonts[0], app.screenWidth, app.screenHeight)
+}
+
+@export
+InitAll :: proc() -> (rawApp: rawptr, rawInput: rawptr)
+{
+  app := new(AppData)
+  input := new(Input)
+  rawApp = rawptr(app)
+  rawInput = rawptr(input)
+
   // NOTE: Spall init
   spall_ctx = spall.context_create("trace.spall")
   app.spall_backing_buffer = make([]u8, spall.BUFFER_DEFAULT_SIZE)
@@ -396,30 +374,26 @@ InitAll :: proc(app: ^AppData)
 
   InitRaylib(app)
   InitClay(app)
+
+  // NOTE: Starting up audio takes very long so I do a 'fake' ui first
+  {
+    Render(app, input)
+    ray.InitAudioDevice()
+  }
+
+  ray.SetTargetFPS(60)
+  ray.SetMasterVolume(app.volume)
+
+  return
 }
 
-InitRaylib :: proc(app: ^AppData)
+@export
+DeInitAll :: proc(rawApp: rawptr)
 {
-  ray.SetTraceLogLevel(.WARNING)
-  ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT, .WINDOW_ALWAYS_RUN}) // WINDOW_HIGHDPI
-  app.screenWidth = 1000
-  app.screenHeight = 800
-  ray.InitWindow(app.screenWidth, app.screenHeight, "playlist viewer")
-}
-
-InitClay :: proc(app: ^AppData)
-{
-  app.fonts[Font_Inconsolata] = ray.LoadFontEx("../resources/Inconsolata-Regular.ttf", 48, nil, 400)
-  ray.SetTextureFilter(app.fonts[Font_Inconsolata].texture, .BILINEAR)
-  app.fonts[Font_LiberationMono] = ray.LoadFontEx("../resources/liberation-mono.ttf", 48, nil, 400)
-  ray.SetTextureFilter(app.fonts[Font_LiberationMono].texture, .BILINEAR)
-  Clay_Init(&app.fonts[0], app.screenWidth, app.screenHeight)
-}
-
-DeInitAll :: proc(app: ^AppData)
-{
+  app := cast(^AppData)rawApp
   Clay_Close()
 
+  for &f in app.fonts { ray.UnloadFont(f) }
   ray.CloseAudioDevice()
   ray.CloseWindow()
 
@@ -555,38 +529,27 @@ Render :: proc(app: ^AppData, input: ^Input)
   ray.EndDrawing()
 }
 
-main :: proc()
+@export
+MainLoop :: proc(rawApp: rawptr, rawInput: rawptr) -> bool
 {
-  app: AppData
-  InitAll(&app)
-  defer DeInitAll(&app)
+  app := cast(^AppData)rawApp
+  input := cast(^Input)rawInput
+  spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
 
-  // NOTE: Starting up audio takes very long so I do a 'fake' ui first
-  input: Input
-  {
-    Render(&app, &input)
-    ray.InitAudioDevice()
-  }
-
-  ray.SetTargetFPS(60)
-  ray.SetMasterVolume(app.volume)
-
-  for !ray.WindowShouldClose() {
-    spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, "update & render")
-
-    if ray.IsWindowMinimized() {
-      // TODO: Also decrease fps?
-      ray.UpdateMusicStream(app.music)
-      if !app.musicPause && app.musicLoaded && !ray.IsMusicStreamPlaying(app.music) {
-        newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
-        app.playlist.activeSongIdx = newIdx
-        ChangeLoadedMusicStream(&app, newIdx)
-      }
-      ray.BeginDrawing(); ray.EndDrawing() // end frame
+  shouldQuit := ray.WindowShouldClose()
+  if ray.IsWindowMinimized() {
+    // TODO: Also decrease fps?
+    ray.UpdateMusicStream(app.music)
+    if !app.musicPause && app.musicLoaded && !ray.IsMusicStreamPlaying(app.music) {
+      newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
+      app.playlist.activeSongIdx = newIdx
+      ChangeLoadedMusicStream(app, newIdx)
     }
-    else {
-      Update(&app, &input)
-      Render(&app, &input)
-    }
+    ray.BeginDrawing(); ray.EndDrawing() // end frame
   }
+  else {
+    Update(app, input)
+    Render(app, input)
+  }
+  return shouldQuit
 }

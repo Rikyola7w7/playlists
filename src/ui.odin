@@ -5,6 +5,71 @@ import "core:prof/spall"
 import ray "vendor:raylib"
 import clay "clay-odin"
 
+Font_Inconsolata :: 0
+Font_LiberationMono :: 1
+
+Clay_Init :: proc(fonts: [^]ray.Font, screenWidth, screenHeight: i32)
+{
+  error_handler :: proc "c" (errorData: clay.ErrorData) {
+    // see clay.ErrorData for more data
+    ray.TraceLog(.ERROR, "%s", errorData.errorText.chars)
+    //switch errorData.errorType {
+
+    //}
+  }
+
+  min_memory_size := uint(clay.MinMemorySize())
+  memory := make([^]u8, min_memory_size)
+  arena: clay.Arena = clay.CreateArenaWithCapacityAndMemory(min_memory_size, memory)
+  clay.Initialize(arena, { width = f32(screenWidth), height = f32(screenHeight) }, { handler = error_handler })
+
+  clay.SetMeasureTextFunction(Raylib_MeasureText, fonts)
+}
+
+Raylib_MeasureText :: proc "c"(text: clay.StringSlice, config: ^clay.TextElementConfig, userData: rawptr) -> clay.Dimensions
+{
+  textSize : clay.Dimensions = ---
+
+  maxTextWidth : f32 = 0.0
+  lineTextWidth : f32 = 0.0
+
+  textHeight := config.fontSize
+  fonts := cast([^]ray.Font)userData
+  fontToUse := fonts[config.fontId]
+  // Font failed to load, likely the fonts are in the wrong place relative to the execution dir.
+  // RayLib ships with a default font, so we can continue with that built in one.
+  if fontToUse.glyphs == nil {
+    fontToUse = ray.GetFontDefault();
+  }
+
+  scaleFactor := f32(config.fontSize)/f32(fontToUse.baseSize)
+
+  byte_index : i32 = 0
+  for byte_index < text.length {
+    if text.chars[byte_index] == '\n' {
+      maxTextWidth = max(maxTextWidth, lineTextWidth)
+      lineTextWidth = 0
+      byte_index += 1
+      continue
+    }
+
+    codepoint_bytes : i32 = 0
+    codepoint := ray.GetCodepoint(cstring(&text.chars[byte_index]), &codepoint_bytes)
+    glyph_index := ray.GetGlyphIndex(fontToUse, codepoint)
+    byte_index += codepoint_bytes
+
+    if fontToUse.glyphs[glyph_index].advanceX != 0 { lineTextWidth += f32(fontToUse.glyphs[glyph_index].advanceX) }
+    else { lineTextWidth += fontToUse.recs[glyph_index].width + f32(fontToUse.glyphs[glyph_index].offsetX) }
+  }
+
+  maxTextWidth = max(maxTextWidth, lineTextWidth)
+
+  textSize.width = maxTextWidth * scaleFactor
+  textSize.height = f32(textHeight)
+
+  return textSize
+}
+
 UI_Prepare :: proc(app: ^AppData, input: ^Input)
 {
   spall.SCOPED_EVENT(&spall_ctx, &spall_buffer, #procedure)
@@ -136,7 +201,7 @@ UI_Calculate :: proc(app: ^AppData, mouseDown: bool) -> clay.ClayArray(clay.Rend
             musicText := fmt.tprintf("song length: %2d:%2d      played: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
             clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
 
-            if clay.UI()({id = clay.ID("SongProgressSlider"), layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
+            if clay.UI()({id = clay.ID("SongProgressSlider"), layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, padding = {8, 8, 0, 0}, childAlignment = {.Center, .Center}}}) {
               if clay.UI()({layout = {sizing = {clay.SizingPercent(app.musicTimePlayed/app.musicTimeLength), clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
               if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}}) {
                 // NOTE: Outside border
