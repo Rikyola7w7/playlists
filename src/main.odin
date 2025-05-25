@@ -299,7 +299,8 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   app.spall_buffer = spall.buffer_create(app.spall_backing_buffer, u32(sync.current_thread_id()))
   spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
 
-  listFile := os.args[1] if len(os.args) > 1 else ""
+  // TODO: Do something smarter for this?
+  listFile := "../songs"
 
   ok: bool
   data: []u8
@@ -347,11 +348,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
       songData = ParseSongs(app, data)
     }
   }
-  else {
-    fmt.printfln("Usage: %s playlist", os.args[0])
-    os.exit(0)
-  }
-  
+
   songs := make([dynamic]^SongData, len(songData), len(songData))
   for i := 0; i < len(songData); i += 1 { songs[i] = &songData[i] }
   app.playlist = Playlist{
