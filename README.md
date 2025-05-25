@@ -16,7 +16,9 @@ Run with a playlist file or a directory
 
 An example playlist file is given in the lists folder: "NCS.txt"
 
-windows: run `playlists.exe playlist_file|directory`
+```console
+./playlists
+```
 
 ### Dependencies
  - odin programming language: https://odin-lang.org/
