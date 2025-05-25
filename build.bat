@@ -17,6 +17,20 @@ set DLL_DIR=%OUT_DIR%\hotreload
 
 set EXE=viewer.exe
 
+if "%~1"=="clean" (
+  rem Go to batch file directory (don't want to delete stuff not here)
+  set t=%cd%
+  cd %~dp0
+  del /q *.exe > nul 2>&1
+  del /q *.dat > nul 2>&1
+  del /q %OUT_DIR%\*
+  rem NOTE: pdbs and dlls will get deleted anyway when rerunning
+  del /q %PDBS_DIR%\*
+  del /q %DLL_DIR%\*
+  cd %t% > nul
+  exit /b 0
+)
+
 :: Check if app is running
 FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE%"') DO IF %%x == %EXE% set APP_RUNNING=true
 
