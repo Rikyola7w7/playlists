@@ -15,7 +15,7 @@ set OUT_DIR=bin
 set PDBS_DIR=%OUT_DIR%\pdbs
 set DLL_DIR=%OUT_DIR%\hotreload
 
-set EXE=playlists.exe
+set EXE=viewer.exe
 
 :: Check if app is running
 FOR /F %%x IN ('tasklist /NH /FI "IMAGENAME eq %EXE%"') DO IF %%x == %EXE% set APP_RUNNING=true
@@ -70,5 +70,5 @@ if not exist "raylib.dll" (
 )
 
 if "%~1"=="run" (
-  playlists.exe
+  %EXE%
 )

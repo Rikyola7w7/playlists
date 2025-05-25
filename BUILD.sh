@@ -6,7 +6,7 @@ odinreleaseflags="-no-bounds-check -disable-assert -no-type-assert -o:speed"
 
 OUT_DIR=bin
 DLL_DIR=$OUT_DIR/hotreload
-EXE=playlists.bin
+EXE=viewer.bin
 
 mkdir -p $OUT_DIR
 mkdir -p $DLL_DIR
