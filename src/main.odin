@@ -441,6 +441,9 @@ DeInitAll :: proc(rawApp: rawptr, rawInput: rawptr)
 
 @export MemorySize :: proc() -> (int, int) { return size_of(AppData), size_of(Input) }
 
+////////////////////////////////////////////
+// Utilities
+
 NextSong :: proc(app: ^AppData) {
   newIdx := (app.playlist.activeSongIdx + 1) % len(app.playlist.songs)
   app.playlist.activeSongIdx = newIdx
@@ -451,6 +454,22 @@ PrevSong :: proc(app: ^AppData) {
   newIdx := (app.playlist.activeSongIdx - 1) %% len(app.playlist.songs)
   app.playlist.activeSongIdx = newIdx
   ChangeLoadedMusicStream(app, newIdx)
+}
+
+ForwardTime :: #force_inline proc(app: ^AppData, seconds: f32)
+{
+  app.musicTimePlayed = min(app.musicTimePlayed + seconds, app.musicTimeLength)
+  if app.musicTimePlayed == app.musicTimeLength {
+    NextSong(app)
+  } else {
+    ray.SeekMusicStream(app.music, app.musicTimePlayed)
+  }
+}
+
+BackTime :: #force_inline proc(app: ^AppData, seconds: f32)
+{
+  app.musicTimePlayed = max(app.musicTimePlayed - seconds, 0.06)
+  ray.SeekMusicStream(app.music, app.musicTimePlayed)
 }
 
 Update :: proc(app: ^AppData, input: ^Input)
@@ -476,20 +495,10 @@ Update :: proc(app: ^AppData, input: ^Input)
 
   // song control
   app.musicTimePlayed = ray.GetMusicTimePlayed(app.music)
-  if ray.IsKeyPressed(.RIGHT) {
-    app.musicTimePlayed = min(app.musicTimePlayed + 5.0, app.musicTimeLength)
-    ray.SeekMusicStream(app.music, app.musicTimePlayed)
-  } else if ray.IsKeyPressed(.LEFT) {
-    app.musicTimePlayed = max(app.musicTimePlayed - 5.0, 0.0)
-    ray.SeekMusicStream(app.music, app.musicTimePlayed)
-  }
-  if ray.IsKeyPressed(.L) {
-    app.musicTimePlayed = min(app.musicTimePlayed + 10.0, app.musicTimeLength)
-    ray.SeekMusicStream(app.music, app.musicTimePlayed)
-  } else if ray.IsKeyPressed(.J) {
-    app.musicTimePlayed = max(app.musicTimePlayed - 10.0, 0.0)
-    ray.SeekMusicStream(app.music, app.musicTimePlayed)
-  }
+  if ray.IsKeyPressed(.RIGHT) { ForwardTime(app, 5.0) }
+  else if ray.IsKeyPressed(.LEFT) { BackTime(app, 5.0) }
+  if ray.IsKeyPressed(.L) { ForwardTime(app, 10.0) }
+  else if ray.IsKeyPressed(.J) { BackTime(app, 10.0) }
 
   if ray.IsKeyPressed(.END) || ray.IsKeyPressed(.KP_1) {
     NextSong(app)
