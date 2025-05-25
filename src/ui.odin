@@ -148,6 +148,41 @@ COLOR_RED :: clay.Color{168, 66, 28, 255}
 // clay.SizingGrow({})
 sizingGrow0 :: clay.SizingAxis{type = .Grow}
 
+SliderDeclaration :: struct {
+  id: clay.ElementId,
+  width: clay.SizingAxis,
+  min, max: f32,
+  value: ^f32,
+}
+
+GeneralSlider :: proc(app: ^AppData, input: ^Input, sliderDeclaration: SliderDeclaration, loc := #caller_location)
+{
+  fmt.assertf(sliderDeclaration.value != nil, "nil for value attribute isn't allowed, called from: %v", loc)
+  fmt.assertf(sliderDeclaration.id.id != 0, "uninitialized id attribute isn't allowed, called from: %v", loc)
+  if clay.UI()({id = sliderDeclaration.id, layout = {sizing = {sliderDeclaration.width, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
+    dotSize: f32 = 24
+    dotRadius: f32 = 6
+    percentage := sliderDeclaration.value^/sliderDeclaration.max
+    sliderData := clay.GetElementData(sliderDeclaration.id)
+    if clay.Hovered() {
+      if input.mouseLeftDown { app.sliderSelected = sliderDeclaration.id }
+    }
+    if app.sliderSelected.id == sliderDeclaration.id.id && app.sliderSelected.offset == sliderDeclaration.id.offset {
+      percentage = (input.mousePos.x - sliderData.boundingBox.x) / sliderData.boundingBox.width
+      percentage = clamp(percentage, 0.0, 1.0)
+      sliderDeclaration.value^ = percentage*sliderDeclaration.max
+      if input.mouseLeftReleased { app.sliderSelected = ELEMENT_ID_NIL }
+    }
+
+    // NOTE: border attribute is calculated one frame after if I understand correctly, so it's better to use another ui element for the border
+    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(1), backgroundColor = COLOR_DARKBLUE}) {}
+    if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width - dotSize/2, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(dotRadius), backgroundColor = {40, 40, 40, 255}}) {
+      if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(dotRadius), backgroundColor = COLOR_RED}) {}
+    }
+  }
+}
+
+// NOTE: This one has a slightly different behaviour
 SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
 {
   if clay.UI()({id = id, layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
@@ -158,8 +193,8 @@ SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
       if input.mouseLeftDown { app.sliderSelected = id }
     }
     if app.sliderSelected.id == id.id {
-      percentage = (input.mousePos.x - sliderData.boundingBox.x - dotSize/2) / sliderData.boundingBox.width
-      percentage = max(min(percentage, 1.0), 0.0)
+      percentage = (input.mousePos.x - sliderData.boundingBox.x) / sliderData.boundingBox.width
+      percentage = clamp(percentage, 0.0, 1.0)
       if input.mouseLeftReleased {
         ray.SeekMusicStream(app.music, percentage*app.musicTimeLength)
         app.sliderSelected = ELEMENT_ID_NIL
@@ -167,7 +202,7 @@ SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
     }
 
     if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(1), backgroundColor = COLOR_DARKBLUE}) {}
-    if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(2), backgroundColor = {40, 40, 40, 255}}) {
+    if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width - dotSize/2, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(2), backgroundColor = {40, 40, 40, 255}}) {
       if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
     }
   }
@@ -217,9 +252,9 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
       }
     }
 
-    if playlist.activeSongIdx != -1 {
-      activeSong := playlist.songs[playlist.activeSongIdx]
-      if clay.UI()({id = clay.ID("ActiveSongContainer"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT}) {
+    if clay.UI()({id = clay.ID("ActiveSongContainer"), layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, padding = {16, 16, 16, 16}, childGap = 16}, backgroundColor = COLOR_LIGHT}) {
+      if playlist.activeSongIdx != -1 {
+        activeSong := playlist.songs[playlist.activeSongIdx]
         clay.TextDynamic(activeSong.name, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
         clay.TextDynamic(activeSong.group, clay.TextConfig({fontSize = 16, textColor = {0, 0, 0, 255}}))
         if app.musicLoaded {
@@ -233,7 +268,7 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
             musicText := fmt.tprintf("song length: %2d:%2d      played: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
             clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
 
-            if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, padding = {4, 4, 0, 0}}}) {
+            if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFit({})}, padding = {4, 4, 0, 0}}}) {
               SongSlider(app, input, clay.ID("SongProgressSlider"))
             }
           }
