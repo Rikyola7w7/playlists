@@ -25,11 +25,14 @@ windows: run `playlists.exe playlist_file|directory`
  - spall profiler (in odin core library): https://github.com/colrdavidson/spall-web
 
 ### Building
-1\. Install odinlang if you don't have it: https://odin-lang.org/
+Install odinlang if you don't have it: https://odin-lang.org/
 
-2\. windows:
-```
+windows:
+```console
 build.bat [run]
 ```
 
-2\. linux: soon
+linux/macos: (macos untested!)
+```console
+./BUILD.sh [run]
+```
