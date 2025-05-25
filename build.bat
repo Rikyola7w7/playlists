@@ -10,6 +10,9 @@ rem Hot reloading script mostly from: https://github.com/karl-zylinski/odin-rayl
 
 set odinreleaseflags=-no-bounds-check -disable-assert -no-type-assert -o:speed
 
+set PREV_DIR=%cd%
+cd /D %~dp0
+
 set APP_RUNNING=false
 set OUT_DIR=bin
 set PDBS_DIR=%OUT_DIR%\pdbs
@@ -19,16 +22,13 @@ set EXE=viewer.exe
 
 if "%~1"=="clean" (
   rem Go to batch file directory (don't want to delete stuff not here)
-  set t=%cd%
-  cd %~dp0
   del /q *.exe > nul 2>&1
   del /q *.dat > nul 2>&1
   del /q %OUT_DIR%\*
   rem NOTE: pdbs and dlls will get deleted anyway when rerunning
   del /q %PDBS_DIR%\*
   del /q %DLL_DIR%\*
-  cd %t% > nul
-  exit /b 0
+  goto endbuild
 )
 
 :: Check if app is running
@@ -60,14 +60,14 @@ set /a PDB_NUMBER=%PDB_NUMBER%+1
 echo %PDB_NUMBER% > %PDBS_DIR%\pdb_number
 
 odin build src -vet -vet-using-param -vet-style -debug -define:RAYLIB_SHARED=true -build-mode:dll -out:%OUT_DIR%\app.dll -pdb-name:%PDBS_DIR%\app_%PDB_NUMBER%.pdb > nul
-if %ERRORLEVEL% neq 0 exit /b 1
+if %ERRORLEVEL% neq 0 goto endbuilderr
 if %APP_RUNNING% == true (
-  exit /b 0
+  goto endbuild
 )
 
 :: Build app.exe, which starts the program and loads app.dll and does the logic for hot reloading.
 odin build src/hot-reload -out:%EXE% -debug -vet -vet-using-param -vet-style -pdb-name:%OUT_DIR%\main_hot_reload.pdb
-if %ERRORLEVEL% neq 0 exit /b 1
+if %ERRORLEVEL% neq 0 goto endbuilderr
 
 set ODIN_PATH=
 for /f "delims=" %%i in ('odin root') do set "ODIN_PATH=%%i"
@@ -76,13 +76,21 @@ if not exist "raylib.dll" (
   if exist "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" (
     echo raylib.dll not found in current directory. Copying from %ODIN_PATH%\vendor\raylib\windows\raylib.dll
     copy "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" .
-    IF %ERRORLEVEL% NEQ 0 exit /b 1
+    IF %ERRORLEVEL% NEQ 0 goto endbuilderr
   ) else (
     echo Please copy raylib.dll from <your_odin_compiler>/vendor/raylib/windows/raylib.dll to the same directory as app.exe
-    exit /b 1
+    goto endbuilderr
   )
 )
 
 if "%~1"=="run" (
   %EXE%
 )
+
+:endbuild
+cd %PREV_DIR% > nul
+exit /b 0
+
+:endbuilderr
+cd %PREV_DIR% > nul
+exit /b 1
