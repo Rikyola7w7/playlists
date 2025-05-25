@@ -58,13 +58,13 @@ if %ERRORLEVEL% neq 0 exit /b 1
 set ODIN_PATH=
 for /f "delims=" %%i in ('odin root') do set "ODIN_PATH=%%i"
 
-if not exist "raylib.dll" (
+if not exist "%OUT_DIR%\raylib.dll" (
   if exist "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" (
     echo raylib.dll not found in current directory. Copying from %ODIN_PATH%\vendor\raylib\windows\raylib.dll
     copy "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" %OUT_DIR%
     IF %ERRORLEVEL% NEQ 0 exit /b 1
   ) else (
-    echo "Please copy raylib.dll from <your_odin_compiler>/vendor/raylib/windows/raylib.dll to the same directory as game.exe"
+    echo Please copy raylib.dll from <your_odin_compiler>/vendor/raylib/windows/raylib.dll to the same directory as app.exe
     exit /b 1
   )
 )
