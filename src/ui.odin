@@ -153,29 +153,23 @@ SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
   if clay.UI()({id = id, layout = {sizing = {sizingGrow0, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
     dotSize: f32 = 24
     percentage := app.musicTimePlayed/app.musicTimeLength
+    sliderData := clay.GetElementData(id)
     if clay.Hovered() {
       if input.mouseLeftDown { app.sliderSelected = id }
     }
     if app.sliderSelected.id == id.id {
-      sliderData := clay.GetElementData(id)
-      if sliderData.found {
-        percentage = (input.mousePos.x - sliderData.boundingBox.x - dotSize/2) / sliderData.boundingBox.width
-        percentage = max(min(percentage, 1.0), 0.0)
-        if input.mouseLeftReleased {
-          ray.SeekMusicStream(app.music, percentage*app.musicTimeLength)
-          app.sliderSelected = ELEMENT_ID_NIL
-        }
+      percentage = (input.mousePos.x - sliderData.boundingBox.x - dotSize/2) / sliderData.boundingBox.width
+      percentage = max(min(percentage, 1.0), 0.0)
+      if input.mouseLeftReleased {
+        ray.SeekMusicStream(app.music, percentage*app.musicTimeLength)
+        app.sliderSelected = ELEMENT_ID_NIL
       }
     }
 
-    if clay.UI()({layout = {sizing = {clay.SizingPercent(percentage), clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
-    if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}}) {
-      // NOTE: Outside border
-      if clay.UI()({floating = {attachTo = .Parent, attachment = {.CenterCenter, .CenterCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /* border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(4), backgroundColor = {40, 40, 40, 255}}) {
-        if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
-      }
+    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(1), backgroundColor = COLOR_DARKBLUE}) {}
+    if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(2), backgroundColor = {40, 40, 40, 255}}) {
+      if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(2), backgroundColor = COLOR_RED}) {}
     }
-    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, backgroundColor = COLOR_DARKBLUE}) {}
   }
 }
 
