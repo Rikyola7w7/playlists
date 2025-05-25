@@ -31,7 +31,7 @@ Install odinlang if you don't have it: https://odin-lang.org/docs/install/
 
 windows:
 ```console
-build.bat [run]
+build.bat [run|clean]
 ```
 
 linux/macos: (macos untested!)
