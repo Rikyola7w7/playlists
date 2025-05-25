@@ -25,7 +25,7 @@ windows: run `playlists.exe playlist_file|directory`
  - spall profiler (in odin core library): https://github.com/colrdavidson/spall-web
 
 ### Building
-Install odinlang if you don't have it: https://odin-lang.org/
+Install odinlang if you don't have it: https://odin-lang.org/docs/install/
 
 windows:
 ```console
