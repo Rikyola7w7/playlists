@@ -281,9 +281,9 @@ InitRaylib :: proc(app: ^AppData)
 
 InitClay :: proc(app: ^AppData)
 {
-  app.fonts[Font_Inconsolata] = ray.LoadFontEx("../resources/Inconsolata-Regular.ttf", 48, nil, 400)
+  app.fonts[Font_Inconsolata] = ray.LoadFontEx("resources/Inconsolata-Regular.ttf", 48, nil, 400)
   ray.SetTextureFilter(app.fonts[Font_Inconsolata].texture, .BILINEAR)
-  app.fonts[Font_LiberationMono] = ray.LoadFontEx("../resources/liberation-mono.ttf", 48, nil, 400)
+  app.fonts[Font_LiberationMono] = ray.LoadFontEx("resources/liberation-mono.ttf", 48, nil, 400)
   ray.SetTextureFilter(app.fonts[Font_LiberationMono].texture, .BILINEAR)
   Clay_Init(&app.fonts[0], app.screenWidth, app.screenHeight)
 }
@@ -300,7 +300,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
 
   // TODO: Do something smarter for this?
-  listFile := "../songs"
+  listFile := "songs"
 
   ok: bool
   data: []u8

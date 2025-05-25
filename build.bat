@@ -52,16 +52,16 @@ if %APP_RUNNING% == true (
 )
 
 :: Build app.exe, which starts the program and loads app.dll and does the logic for hot reloading.
-odin build src/hot-reload -out:%OUT_DIR%\%EXE% -debug -vet -vet-using-param -vet-style -pdb-name:%OUT_DIR%\main_hot_reload.pdb
+odin build src/hot-reload -out:%EXE% -debug -vet -vet-using-param -vet-style -pdb-name:%OUT_DIR%\main_hot_reload.pdb
 if %ERRORLEVEL% neq 0 exit /b 1
 
 set ODIN_PATH=
 for /f "delims=" %%i in ('odin root') do set "ODIN_PATH=%%i"
 
-if not exist "%OUT_DIR%\raylib.dll" (
+if not exist "raylib.dll" (
   if exist "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" (
     echo raylib.dll not found in current directory. Copying from %ODIN_PATH%\vendor\raylib\windows\raylib.dll
-    copy "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" %OUT_DIR%
+    copy "%ODIN_PATH%\vendor\raylib\windows\raylib.dll" .
     IF %ERRORLEVEL% NEQ 0 exit /b 1
   ) else (
     echo Please copy raylib.dll from <your_odin_compiler>/vendor/raylib/windows/raylib.dll to the same directory as app.exe
@@ -70,8 +70,5 @@ if not exist "%OUT_DIR%\raylib.dll" (
 )
 
 if "%~1"=="run" (
-  pushd bin
-  rem playlists.exe "../lists/NCS.txt"
-  playlists.exe "../songs"
-  popd
+  playlists.exe
 )

@@ -51,10 +51,8 @@ if pgrep -f $EXE > /dev/null; then
     exit 0
 fi
 
-odin build src/hot-reload -out:$OUT_DIR/$EXE -vet -vet-using-param -vet-style -debug
+odin build src/hot-reload -out:$EXE -vet -vet-using-param -vet-style -debug
 
 if [ $# -ge 1 ] && [ $1 == "run" ]; then
-    cd $OUT_DIR
-    ./$EXE ../songs &
-    cd ..
+    ./$EXE &
 fi

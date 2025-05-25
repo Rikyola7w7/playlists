@@ -9,8 +9,8 @@ import "core:os/os2"
 import "core:dynlib"
 import "core:path/filepath"
 
-DLL_DIR :: "hotreload/"
-DLL_NAME :: "app." + dynlib.LIBRARY_FILE_EXTENSION
+DLL_DIR :: "bin/hotreload/"
+DLL_NAME :: "bin/app." + dynlib.LIBRARY_FILE_EXTENSION
 
 dllFileHandle: ^os2.File
 dllFileInfo: os2.File_Info
