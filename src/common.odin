@@ -37,6 +37,7 @@ AppData :: struct {
   music: ray.Music,
   musicTimeLength: f32,
   musicTimePlayed: f32,
+  musicSliderValue: f32,
   musicLoaded: bool,
   musicPause: bool,
 

@@ -200,6 +200,7 @@ SongSlider :: proc(app: ^AppData, input: ^Input, id: clay.ElementId)
         app.sliderSelected = ELEMENT_ID_NIL
       }
     }
+    app.musicSliderValue = percentage*app.musicTimeLength
 
     if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(1), backgroundColor = COLOR_DARKBLUE}) {}
     if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width - dotSize/2, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(2), backgroundColor = {40, 40, 40, 255}}) {
@@ -262,10 +263,11 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
             musicLenSecs := int(app.musicTimeLength)
             musicLenMins := musicLenSecs/60
             musicLenSecs %= 60
-            musicPlayedSecs := int(app.musicTimePlayed)
+            musicPlayedSecs := int(app.musicSliderValue)
             musicPlayedMins := musicPlayedSecs/60
             musicPlayedSecs %= 60
-            musicText := fmt.tprintf("song length: %2d:%2d      played: %2d:%2d", musicLenMins, musicLenSecs, musicPlayedMins, musicPlayedSecs)
+            // NOTE: IMPORTANT: I don't like how this looks, I will for sure do another pass on the ui
+            musicText := fmt.tprintf("%2d:%2d/%2d:%2d", musicPlayedMins, musicPlayedSecs, musicLenMins, musicLenSecs)
             clay.TextDynamic(musicText, clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
 
             if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFit({})}, padding = {4, 4, 0, 0}}}) {
