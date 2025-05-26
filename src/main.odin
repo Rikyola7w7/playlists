@@ -272,6 +272,7 @@ DATAFILE_NAME :: "prog.dat"
 
 InitRaylib :: proc(app: ^AppData)
 {
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
   ray.SetTraceLogLevel(.WARNING)
   ray.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT, .WINDOW_ALWAYS_RUN}) // WINDOW_HIGHDPI
   app.screenWidth = 1000
@@ -281,6 +282,7 @@ InitRaylib :: proc(app: ^AppData)
 
 InitClay :: proc(app: ^AppData)
 {
+  spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
   app.fonts[Font_Inconsolata] = ray.LoadFontEx("resources/Inconsolata-Regular.ttf", 48, nil, 400)
   ray.SetTextureFilter(app.fonts[Font_Inconsolata].texture, .BILINEAR)
   app.fonts[Font_LiberationMono] = ray.LoadFontEx("resources/liberation-mono.ttf", 48, nil, 400)
@@ -302,6 +304,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   // TODO: Do something smarter for this?
   listFile := "songs"
 
+  spall._buffer_begin(&app.spall_ctx, &app.spall_buffer, "data file parsing")
   ok: bool
   data: []u8
   if os.exists(DATAFILE_NAME) {
@@ -317,7 +320,9 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
       listFile = strings.string_from_ptr(startStr, strLen)
     }
   }
+  spall._buffer_end(&app.spall_ctx, &app.spall_buffer) // data file parsing
 
+  spall._buffer_begin(&app.spall_ctx, &app.spall_buffer, "playlist building")
   songData: [dynamic]SongData
   if listFile != "" {
     if os.is_dir(listFile) {
@@ -359,6 +364,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   }
   app.playlistFileAbsPath = listFile
   if !filepath.is_abs(listFile) { app.playlistFileAbsPath, _ = filepath.abs(listFile) }
+  spall._buffer_end(&app.spall_ctx, &app.spall_buffer) // playlist building
 
   // volume 1 is way too high
   if app.volume == 0 { app.volume = 0.18 }
@@ -368,6 +374,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
 
   // NOTE: Starting up audio takes very long so I do a 'fake' ui first
   {
+    spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, "init raylib audio + render single frame")
     Render(app, input)
     ray.InitAudioDevice()
   }
@@ -381,7 +388,7 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
 @export
 InitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
 {
-  // Here, startup anything that needs to be restarted each time a new dll comes
+  // Here, startup anything that needs to be restarted each time a new dll is loaded
   app := cast(^AppData)rawApp
   //input := cast(^Input)rawInput
 
@@ -391,7 +398,7 @@ InitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
 @export
 DeInitPartial :: proc(rawApp: rawptr, rawInput: rawptr)
 {
-  // Here, close anything that needs to be restarted each time a new dll comes
+  // Here, close anything that needs to be restarted each time a new dll is loaded
   //app := cast(^AppData)rawApp
   //input := cast(^Input)rawInput
 
