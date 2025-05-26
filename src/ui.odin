@@ -161,7 +161,7 @@ GeneralSlider :: proc(app: ^AppData, input: ^Input, sliderDeclaration: SliderDec
   fmt.assertf(sliderDeclaration.id.id != 0, "uninitialized id attribute isn't allowed, called from: %v", loc)
   if clay.UI()({id = sliderDeclaration.id, layout = {sizing = {sliderDeclaration.width, clay.SizingFixed(30)}, childAlignment = {.Center, .Center}}}) {
     dotSize: f32 = 24
-    dotRadius: f32 = 6
+    dotRadius: f32 = 12
     percentage := sliderDeclaration.value^/sliderDeclaration.max
     sliderData := clay.GetElementData(sliderDeclaration.id)
     if clay.Hovered() {
@@ -175,7 +175,7 @@ GeneralSlider :: proc(app: ^AppData, input: ^Input, sliderDeclaration: SliderDec
     }
 
     // NOTE: border attribute is calculated one frame after if I understand correctly, so it's better to use another ui element for the border
-    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(1), backgroundColor = COLOR_DARKBLUE}) {}
+    if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFixed(16)}}, cornerRadius = clay.CornerRadiusAll(4), backgroundColor = COLOR_LIGHT}) {}
     if clay.UI()({floating = {attachTo = .Parent, offset = {percentage*sliderData.boundingBox.width - dotSize/2, 0}, attachment = {.LeftCenter, .LeftCenter}}, layout = {sizing = {clay.SizingFixed(dotSize), clay.SizingFixed(dotSize)}, childAlignment = {.Center, .Center}}, /*border = {width = clay.BorderOutside(4), color = {40, 40, 40, 255}},*/ cornerRadius = clay.CornerRadiusAll(dotRadius), backgroundColor = {40, 40, 40, 255}}) {
       if clay.UI()({layout = {sizing = {clay.SizingFixed(20), clay.SizingFixed(20)}}, cornerRadius = clay.CornerRadiusAll(dotRadius), backgroundColor = COLOR_RED}) {}
     }
@@ -270,6 +270,11 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
 
             if clay.UI()({layout = {sizing = {sizingGrow0, clay.SizingFit({})}, padding = {4, 4, 0, 0}}}) {
               SongSlider(app, input, clay.ID("SongProgressSlider"))
+            }
+
+            if clay.UI()({layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, childAlignment = {.Right, .Bottom}}}) {
+              GeneralSlider(app, input, {id = clay.ID("volumeSlider"), width = clay.SizingPercent(0.4), max = 1.0, value = &app.volume})
+              clay.TextDynamic(fmt.tprintf("volume: %3.1f%%", 100.0*app.volume), clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
             }
           }
         }
