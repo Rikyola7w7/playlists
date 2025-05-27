@@ -274,9 +274,13 @@ UI_Calculate :: proc(app: ^AppData, input: ^Input) -> clay.ClayArray(clay.Render
               SongSlider(app, input, clay.ID("SongProgressSlider"))
             }
 
+            prevVolume := app.volume
             if clay.UI()({layout = {layoutDirection = .TopToBottom, sizing = {sizingGrow0, sizingGrow0}, childAlignment = {.Right, .Bottom}}}) {
               GeneralSlider(app, input, {id = clay.ID("volumeSlider"), width = clay.SizingPercent(0.4), max = 1.0, value = &app.volume})
               clay.TextDynamic(fmt.tprintf("volume: %3.1f%%", 100.0*app.volume), clay.TextConfig({fontSize = 14, textColor = {0, 0, 0, 255}}))
+            }
+            if app.volume != prevVolume {
+              ray.SetMasterVolume(app.volume)
             }
           }
         }
