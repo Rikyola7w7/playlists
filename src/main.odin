@@ -11,6 +11,8 @@ import "core:path/filepath"
 import "core:prof/spall"
 import ray "vendor:raylib"
 
+DATAFILE_NAME :: "prog.dat"
+
 SortSongData :: proc(songs: []SongData)
 {
   groupLess :: proc(i, j: SongData) -> bool { return i.group < j.group }
@@ -263,13 +265,6 @@ ChangeLoadedMusicStream :: proc(app: ^AppData, newIdx: int)
   }
 }
 
-DataFile :: struct #packed {
-  volume: f32,
-  previousSongLen: i32, // length of the string
-  previousSong: [^]u8,
-}
-DATAFILE_NAME :: "prog.dat"
-
 InitRaylib :: proc(app: ^AppData)
 {
   spall.SCOPED_EVENT(&app.spall_ctx, &app.spall_buffer, #procedure)
@@ -304,21 +299,17 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   // TODO: Do something smarter for this?
   listFile := "songs"
 
-  spall._buffer_begin(&app.spall_ctx, &app.spall_buffer, "data file parsing")
+  err: os.Error
   ok: bool
-  data: []u8
-  if os.exists(DATAFILE_NAME) {
-    data, ok = os.read_entire_file(DATAFILE_NAME)
-    assert(ok)
 
-    volume := (cast(^f32)&data[offset_of(DataFile, volume)])^
+  data: []u8
+  spall._buffer_begin(&app.spall_ctx, &app.spall_buffer, "data file parsing")
+  if os.exists(DATAFILE_NAME) {
+    data, err = os.read_entire_file_or_err(DATAFILE_NAME)
+    fmt.assertf(err == nil, "Could not read " + DATAFILE_NAME + " file: %v", err)
+
+    volume := (cast(^f32)&data[0])^
     app.volume = clamp(volume, 0.0, 0.4)
-    // NOTE: If I want to delete the data from the file, clone the string here.
-    if listFile == "" {
-      startStr := &data[8]
-      strLen := int((cast(^i32)&data[4])^)
-      listFile = strings.string_from_ptr(startStr, strLen)
-    }
   }
   spall._buffer_end(&app.spall_ctx, &app.spall_buffer) // data file parsing
 
@@ -327,8 +318,8 @@ InitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   if listFile != "" {
     if os.is_dir(listFile) {
       fileInfos: []os.File_Info
-      songDir, err := os.open(listFile)
-      assert(err == nil, "Could not open directory")
+      songDir, ferr := os.open(listFile)
+      assert(ferr == nil, "Could not open directory")
       // TODO: Read more than the max count of files when exceeded?
       fileInfos, err = os.read_dir(songDir, 128) // 128 files max
       assert(err == nil)
@@ -417,21 +408,14 @@ DeInitAll :: proc(rawApp: rawptr, rawInput: rawptr)
   ray.CloseWindow()
 
   {
-    playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
-    dataFile: DataFile
-    dataFile.volume = app.volume
-    dataFile.previousSongLen = i32(len(playlistAbsPathData))
+    //playlistAbsPathData := transmute([]u8)app.playlistFileAbsPath
+    bytesWritten: int = ---
     dF, err := os.open(DATAFILE_NAME, os.O_TRUNC | os.O_CREATE)
     fmt.assertf(err == nil, "Could not open file: %s: %v", DATAFILE_NAME, err)
-    bytesWritten: int = ---
-    bytesWritten, err = os.write_ptr(dF, &app.volume, size_of(app.volume))
-    assert(err == nil)
-    bytesWritten, err = os.write_ptr(dF, &dataFile.previousSongLen, size_of(dataFile.previousSongLen))
-    assert(err == nil)
-    //bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&dataFile, int(offset_of(DataFile, previousSongLen))))
-    //assert(err == nil && bytesWritten == int(offset_of(DataFile, previousSongLen)))
-    bytesWritten, err = os.write(dF, playlistAbsPathData)
-    assert(err == nil && bytesWritten == len(playlistAbsPathData)*size_of(playlistAbsPathData[0]))
+    bytesWritten, err = os.write(dF, slice.bytes_from_ptr(&app.volume, size_of(app.volume)))
+    if err != nil {
+      fmt.eprintfln("Could not write data into datafile: %v", err)
+    }
     os.close(dF)
   }
 
