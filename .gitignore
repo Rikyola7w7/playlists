@@ -1,0 +1,6 @@
+bin/
+songs/
+lists/
+*.tmp
+*.spall
+*.exe
