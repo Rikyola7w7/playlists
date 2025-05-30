@@ -1,4 +1,4 @@
-## Playlists program
+## Playlist viewer
 
 A program to show playlists and also to play them :)
 
@@ -12,12 +12,8 @@ For planned updates/fixes, see TODO.txt
 
 ## Usage
 
-Run with a playlist file or a directory
-
-An example playlist file is given in the lists folder: "NCS.txt"
-
 ```console
-./playlists
+./viewer
 ```
 
 ### Dependencies
