@@ -12,6 +12,8 @@ For planned updates/fixes, see TODO.txt
 
 ## Usage
 
+Right now, the program will keep a trace of various events in a file called 'trace.spall'. I will soon have this be optional, however, last time I checked, it made a 500MB file from a 9h trace.
+
 ```console
 ./viewer
 ```
