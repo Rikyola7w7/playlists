@@ -8,14 +8,14 @@
 [x] Hot reloading
 
 UI:
+[x] UI to show the amount of song left as a bar
+[x] UI for volume controls (slider + info)
 [ ] UI for adding a song to the list
-[ ] UI to show the amount of song left as a bar
 [ ] UI to randomize list order (call the ShuffleSongs proc)
-[ ] UI to sort list order by various properties (artist, alphabetical, ...)
 [ ] UI to show the details of a song without playing it
-[ ] UI for volume controls (slider + info)
+
+UI rework:
 [ ] UI colors T-T
-[ ] UI rework ?
 [ ] Possibility for different color themes ?
 
 [ ] Probably no way to do it in raylib, but try to find out if I can keep the music playing while moving/resizing the window ?
@@ -28,3 +28,6 @@ Performance:
 
 Issues:
 [ ] Wrong ui layout when moving from a one screen to another, only if the screens have different aspect ratio (?)
+
+Not a priority:
+[ ] UI to sort list order by various properties (artist, alphabetical, ...)
