@@ -1,4 +1,4 @@
-@echo off
+
 rem Hot reloading script mostly from: https://github.com/karl-zylinski/odin-raylib-hot-reload-game-template/blob/main/build_hot_reload.bat
 :: Copyright (c) 2024 Karl Zylinski
 :: 
